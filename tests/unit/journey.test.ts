@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { profile } from '../../src/data/profile';
-import { progressFrom } from '../../src/site/effects';
+import { dimFor, progressFrom } from '../../src/site/effects';
 import { entropyBits, facts, parseBrowser, parseOS } from '../../src/site/fingerprint';
 import { hopsFor } from '../../src/site/hops';
 import { damp, pathPoints, progressToT, seeded } from '../../src/scene/path';
@@ -96,5 +96,18 @@ describe('empreinte du navigateur', () => {
     expect(list.find((f) => f.label === 'Do Not Track')?.value).toBe('activé');
     expect(list.some((f) => f.label === 'Mémoire')).toBe(false);
     expect(entropyBits(list)).toBeGreaterThan(20);
+  });
+});
+
+describe('voile de la citation', () => {
+  it('assombrit tout près, rien au loin, en douceur entre les deux', () => {
+    expect(dimFor(0)).toBe(1);
+    expect(dimFor(40)).toBe(1);
+    expect(dimFor(340)).toBe(0);
+    expect(dimFor(2000)).toBe(0);
+    const mid = dimFor(190);
+    expect(mid).toBeGreaterThan(0.4);
+    expect(mid).toBeLessThan(0.6);
+    expect(dimFor(100)).toBeGreaterThan(dimFor(200));
   });
 });

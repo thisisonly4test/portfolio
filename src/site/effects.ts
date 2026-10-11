@@ -104,3 +104,76 @@ export function setupJourney(options: {
     ro?.disconnect();
   };
 }
+
+/**
+ * Intensité de l'assombrissement selon la distance (en px) entre la souris et
+ * la citation : 1 tout près, 0 au-delà de `far`, en douceur entre les deux.
+ */
+export function dimFor(dist: number, near = 40, far = 340): number {
+  const t = Math.min(1, Math.max(0, (far - dist) / (far - near)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Quand la souris s'approche de la citation du bas, le reste du site baisse
+ * doucement en luminosité ; seule la citation reste dans la lumière. Un voile
+ * fixe, percé d'un halo qui suit la citation au défilement.
+ */
+export function setupCodaDim(coda: HTMLElement, reducedMotion: boolean): void {
+  const veil = document.createElement('div');
+  veil.className = 'coda-dim';
+  veil.setAttribute('aria-hidden', 'true');
+  document.body.append(veil);
+
+  let target = 0;
+  let k = 0;
+  let raf = 0;
+  let last = 0;
+  const pointer = { x: -1e4, y: -1e4 };
+
+  const measure = () => {
+    const r = coda.getBoundingClientRect();
+    // Distance au rectangle de la citation : nulle dedans.
+    const dx = Math.max(r.left - pointer.x, 0, pointer.x - r.right);
+    const dy = Math.max(r.top - pointer.y, 0, pointer.y - r.bottom);
+    target = coda.matches(':focus') ? 1 : dimFor(Math.hypot(dx, dy));
+    return r;
+  };
+
+  const step = (now: number) => {
+    const dt = last ? now - last : 16;
+    last = now;
+    const r = measure();
+    // Lissage indépendant de la cadence : environ 0,4 s pour arriver.
+    k = reducedMotion ? target : k + (target - k) * (1 - Math.exp(-dt / 140));
+    if (Math.abs(target - k) < 0.002) k = target;
+    veil.style.setProperty('--x', `${r.left + r.width / 2}px`);
+    veil.style.setProperty('--y', `${r.top + r.height / 2}px`);
+    veil.style.setProperty('--rx', `${r.width / 2 + 90}px`);
+    veil.style.setProperty('--ry', `${r.height / 2 + 70}px`);
+    veil.style.opacity = k.toFixed(3);
+    raf = k === target && k === 0 ? 0 : requestAnimationFrame(step);
+    if (!raf) last = 0;
+  };
+  const wake = () => {
+    if (!raf) raf = requestAnimationFrame(step);
+  };
+
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      if (e.pointerType === 'touch') return;
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      wake();
+    },
+    { passive: true },
+  );
+  document.documentElement.addEventListener('pointerleave', () => {
+    pointer.x = pointer.y = -1e4;
+    wake();
+  });
+  window.addEventListener('scroll', wake, { passive: true });
+  coda.addEventListener('focus', wake);
+  coda.addEventListener('blur', wake);
+}

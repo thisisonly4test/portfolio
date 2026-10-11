@@ -1039,6 +1039,20 @@
   }
 }
 
+/* Le voile qui assombrit le site autour de la citation, sauf un halo sur elle. */
+.coda-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(4, 4, 6, 0.42);
+  /* Percé autour de la citation : transparent au centre, plein au loin. */
+  -webkit-mask-image: radial-gradient(calc(var(--rx, 200px) * 1.7) calc(var(--ry, 80px) * 1.7) at var(--x, 50%) var(--y, 100%), transparent 38%, #000 100%);
+  mask-image: radial-gradient(calc(var(--rx, 200px) * 1.7) calc(var(--ry, 80px) * 1.7) at var(--x, 50%) var(--y, 100%), transparent 38%, #000 100%);
+  will-change: opacity;
+}
+
 .foot {
   display: flex;
   flex-wrap: wrap;

@@ -8,7 +8,7 @@ import { prefersReducedMotion } from './dom';
 import { runIntro } from './intro/intro';
 import { buildFS } from './shell/vfs';
 import { createConsole } from './site/console';
-import { setupJourney, setupReveal } from './site/effects';
+import { setupCodaDim, setupJourney, setupReveal } from './site/effects';
 import { classifyCommand, events } from './site/events';
 import { renderPage } from './site/page';
 import { createToaster, scramble } from './site/widgets';
@@ -75,6 +75,9 @@ worldBtn.addEventListener('click', () => {
   setWorldDisabled(!worldDisabled());
   location.reload();
 });
+
+const coda = page.root.querySelector<HTMLElement>('.coda');
+if (coda) setupCodaDim(coda, prefersReducedMotion());
 
 setupReveal(page.root, (el) => {
   if (el.tagName === 'H2') scramble(el);
