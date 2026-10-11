@@ -204,3 +204,36 @@ test.describe('sécurité', () => {
     await expect(page.locator('.k-alerts strong')).toHaveText('1');
   });
 });
+
+test.describe('whiterose', () => {
+  test('la citation finale signe whiterose', async ({ page }) => {
+    await page.goto('/?intro=skip');
+    const coda = page.locator('.coda');
+    await coda.scrollIntoViewIfNeeded();
+    await expect(coda).toHaveClass(/in/);
+    await expect(coda.locator('.coda-sign')).toContainText('whiterose');
+    await expect(coda.locator('.coda-time')).not.toHaveText('00:00:00.00');
+  });
+
+  test('la commande ouvre la pièce, son terminal répond, Échap ramène au site', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto('/?intro=skip');
+    await page.locator('.nav-term').click();
+    const input = page.locator('.console .term-input');
+    await input.fill('whiterose');
+    await input.press('Enter');
+    await expect(page.locator('.console')).toBeHidden();
+    const room = page.getByRole('dialog', { name: 'whiterose' });
+    await expect(room).toBeVisible();
+    await expect(room.locator('.wr-screen')).toBeVisible({ timeout: 10_000 });
+    await expect(room.locator('.wr-out')).toContainText('tape help', { timeout: 10_000 });
+    await room.locator('.wr-input').fill('time');
+    await room.locator('.wr-input').press('Enter');
+    await expect(room.locator('.wr-out')).toContainText('Tu es ici depuis');
+    await page.keyboard.press('Escape');
+    await expect(room).toHaveCount(0, { timeout: 8_000 });
+    await expect(page.locator('html')).not.toHaveClass(/wr-open/);
+    expect(errors).toEqual([]);
+  });
+});

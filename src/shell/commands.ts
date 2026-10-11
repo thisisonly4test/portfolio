@@ -287,6 +287,15 @@ export const commands: Record<string, Command> = {
     },
   },
 
+  whiterose: {
+    summary: 'Le temps est compté',
+    hidden: true,
+    run(_args, ctx) {
+      ctx.out(c('muted', 'Ouverture d’un canal vers un hôte inconnu…'));
+      ctx.effect({ type: 'whiterose' });
+    },
+  },
+
   reboot: {
     summary: "Rejoue l'intro",
     run(_args, ctx) {

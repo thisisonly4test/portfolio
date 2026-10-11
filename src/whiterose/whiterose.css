@@ -1,0 +1,500 @@
+/* ---------- whiterose : la pièce cachée ---------- */
+
+.wr-open,
+.wr-open body {
+  overflow: hidden;
+}
+
+.wr {
+  --phosphor: #e9fff3;
+  --phosphor-dim: #a6e8c6;
+  --glass: #1d8660;
+  --glass-edge: #0b4630;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow: hidden;
+  background: #030303;
+  color: var(--phosphor);
+  cursor: default;
+  transition: opacity 0.45s ease;
+}
+
+.wr.gone {
+  opacity: 0;
+}
+
+.wr-world {
+  position: absolute;
+  inset: 0;
+}
+
+/* L'image, en unités natives (640 × 361) : la caméra la déplace et l'agrandit. */
+.wr-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 640px;
+  height: 361px;
+  transform-origin: 0 0;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  /* Bords fondus : la pièce se perd dans le noir au lieu de s'arrêter net. */
+  -webkit-mask-image: radial-gradient(130% 130% at 55% 50%, #000 58%, transparent 74%);
+  mask-image: radial-gradient(130% 130% at 55% 50%, #000 58%, transparent 74%);
+}
+
+.wr.lit .wr-stage {
+  opacity: 1;
+}
+
+.wr-room {
+  display: block;
+  width: 640px;
+  height: 361px;
+  user-select: none;
+  transition: filter 1.6s ease;
+}
+
+/* Profondeur de champ : une fois devant l'écran, la pièce s'efface un peu. */
+.wr.focused .wr-room {
+  filter: blur(0.35px) brightness(0.62) saturate(0.9);
+}
+
+.wr-lamp {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 196, 110, 0.38), rgba(255, 170, 80, 0.12) 45%, transparent 75%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.wr-monitor-glow {
+  position: absolute;
+  left: 420px;
+  top: 100px;
+  width: 180px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(70, 255, 170, 0.16), transparent 75%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: wr-hum 3.2s ease-in-out infinite;
+}
+
+@keyframes wr-hum {
+  50% {
+    opacity: 0.75;
+  }
+}
+
+/* ---------- traçage sur la carte ---------- */
+
+.wr-map {
+  position: absolute;
+  inset: 0;
+  width: 640px;
+  height: 361px;
+  overflow: visible;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.wr-map.fade {
+  opacity: 0;
+}
+
+.wr-arc {
+  fill: none;
+  stroke: #d8ffe9;
+  stroke-width: 0.45;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 1.2px #59ffb1);
+  animation: wr-draw 0.6s ease-out forwards;
+}
+
+@keyframes wr-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.wr-dot {
+  fill: #f2fff8;
+  filter: drop-shadow(0 0 1.5px #59ffb1);
+}
+
+.wr-dot-end {
+  fill: #ff5a5f;
+  filter: drop-shadow(0 0 2px #ff5a5f);
+}
+
+.wr-ping {
+  fill: none;
+  stroke: #9dffd0;
+  stroke-width: 0.35;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wr-ping 1.4s ease-out infinite;
+}
+
+.wr-ping-end {
+  stroke: #ff5a5f;
+  animation-duration: 0.9s;
+}
+
+@keyframes wr-ping {
+  from {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: scale(4.5);
+    opacity: 0;
+  }
+}
+
+.wr-label {
+  font-family: var(--mono);
+  font-size: 3.4px;
+  letter-spacing: 0.04em;
+  fill: #e9fff3;
+  paint-order: stroke;
+  stroke: rgba(0, 20, 10, 0.85);
+  stroke-width: 0.8px;
+  animation: wr-in 0.4s ease-out both;
+}
+
+@keyframes wr-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- l'écran du moniteur ---------- */
+
+/* Posé sur le verre par une homographie calculée à chaque image. */
+.wr-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  border-radius: 7% / 8%;
+  overflow: hidden;
+  opacity: 0;
+  font-family: 'VT323', var(--mono);
+  line-height: 1.12;
+}
+
+.wr-screen.on,
+.wr-screen.off {
+  opacity: 1;
+}
+
+.wr-crt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 5.5% 6.5% 5%;
+  background:
+    radial-gradient(120% 95% at 50% 45%, var(--glass) 0%, #15734f 55%, var(--glass-edge) 100%);
+  color: var(--phosphor);
+  text-shadow:
+    0 0 1px rgba(255, 255, 255, 0.9),
+    0 0 6px rgba(140, 255, 200, 0.55);
+  box-shadow:
+    inset 0 0 40px 10px rgba(0, 25, 15, 0.55),
+    inset 0 0 6px 2px rgba(0, 0, 0, 0.5);
+  transform-origin: 50% 50%;
+}
+
+/* Lignes de balayage et léger scintillement du tube. */
+.wr-crt::before,
+.wr-crt::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.wr-crt::before {
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+.wr-crt::after {
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(200, 255, 230, 0.06) 50%, transparent 100%) 0 0 / 100% 40% no-repeat,
+    radial-gradient(90% 70% at 35% 25%, rgba(255, 255, 255, 0.09), transparent 60%);
+  animation: wr-roll 7s linear infinite;
+}
+
+@keyframes wr-roll {
+  from {
+    background-position: 0 -40%, 0 0;
+  }
+  to {
+    background-position: 0 140%, 0 0;
+  }
+}
+
+.wr-screen.on .wr-crt {
+  animation:
+    wr-power 0.62s cubic-bezier(0.2, 0.7, 0.2, 1) both,
+    wr-flicker 0.12s steps(2) infinite 0.7s;
+}
+
+.wr-screen.off .wr-crt {
+  animation: wr-power-off 0.42s ease-in forwards;
+}
+
+@keyframes wr-power {
+  0% {
+    transform: scale(1, 0.004);
+    filter: brightness(4);
+  }
+  40% {
+    transform: scale(1, 0.004);
+    filter: brightness(4);
+  }
+  70% {
+    transform: scale(1, 1.04);
+    filter: brightness(1.6);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes wr-power-off {
+  0% {
+    transform: none;
+    filter: none;
+  }
+  55% {
+    transform: scale(1, 0.006);
+    filter: brightness(3);
+  }
+  100% {
+    transform: scale(0, 0.004);
+    filter: brightness(5);
+  }
+}
+
+@keyframes wr-flicker {
+  50% {
+    opacity: 0.975;
+  }
+}
+
+.wr-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  padding-bottom: 0.3em;
+  margin-bottom: 0.4em;
+  border-bottom: 1px solid rgba(233, 255, 243, 0.35);
+  color: var(--phosphor-dim);
+  white-space: nowrap;
+}
+
+.wr-clock {
+  font-variant-numeric: tabular-nums;
+}
+
+.wr-out {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.wr-out p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.wr-dim {
+  color: var(--phosphor-dim);
+}
+
+.wr-echo {
+  opacity: 0.75;
+}
+
+.wr-alert {
+  color: #ffd6d7;
+  text-shadow:
+    0 0 1px #fff,
+    0 0 8px rgba(255, 90, 95, 0.9);
+}
+
+.wr-line {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  min-height: 1.2em;
+}
+
+.wr-ps {
+  color: var(--phosphor-dim);
+}
+
+.wr-typed {
+  white-space: pre;
+}
+
+.wr-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.95em;
+  margin-left: -0.45em;
+  transform: translateY(0.12em);
+  background: var(--phosphor);
+  box-shadow: 0 0 6px rgba(140, 255, 200, 0.8);
+  animation: wr-blink 1.05s steps(1) infinite;
+}
+
+@keyframes wr-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Champ réel, invisible, posé sur la ligne : le clavier des mobiles s'ouvre au toucher. */
+.wr-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+}
+
+/* ---------- habillage ---------- */
+
+.wr-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.72) 100%);
+}
+
+.wr-grain {
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: wr-grain 0.9s steps(6) infinite;
+}
+
+@keyframes wr-grain {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-3%, 2%);
+  }
+  40% {
+    transform: translate(2%, -4%);
+  }
+  60% {
+    transform: translate(-4%, -1%);
+  }
+  80% {
+    transform: translate(3%, 3%);
+  }
+}
+
+.wr-exit {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  z-index: 2;
+  padding: 8px 12px;
+  border: 1px solid rgba(233, 255, 243, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(233, 255, 243, 0.6);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.6s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.wr.focused .wr-exit {
+  opacity: 1;
+}
+
+.wr-exit:hover,
+.wr-exit:focus-visible {
+  color: var(--phosphor);
+  border-color: rgba(233, 255, 243, 0.5);
+}
+
+/* Le noir de l'entrée et de la sortie. */
+.wr-black {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+
+.wr-black.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wr-black.instant {
+  transition: none;
+}
+
+.wr-connect {
+  margin: 0;
+  min-height: 1.4em;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #cfcfd4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wr-grain,
+  .wr-monitor-glow,
+  .wr-crt::after,
+  .wr-ping {
+    animation: none;
+  }
+  .wr-screen.on .wr-crt,
+  .wr-screen.off .wr-crt {
+    animation: none;
+  }
+}

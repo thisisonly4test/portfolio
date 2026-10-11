@@ -39,7 +39,7 @@ const page = renderPage(profile, { log: events });
 app.append(page.root, toaster.el);
 
 // Le monde en 3D se charge à part : le contenu s'affiche sans l'attendre.
-let world: { setProgress: (p: number) => void } | null = null;
+let world: { setProgress: (p: number) => void; setPaused: (p: boolean) => void } | null = null;
 let pendingProgress = 0;
 const map = {
   setProgress: (p: number) => {
@@ -102,6 +102,7 @@ const consoleUi = createConsole({
   },
   onEffect: (e) => {
     if (e.type === 'goto') document.getElementById(e.section)?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    else if (e.type === 'whiterose') void whiterose();
     else if (e.type === 'reboot') {
       consoleUi.close();
       setTimeout(() => void intro(true), 250);
@@ -115,6 +116,36 @@ page.root.querySelector('[data-action="replay"]')?.addEventListener('click', () 
   window.scrollTo({ top: 0 });
   void intro(true);
 });
+
+// ---------- le mot de la fin : le temps passé ici, au centième ----------
+const codaTime = page.root.querySelector<HTMLElement>('.coda-time');
+if (codaTime && typeof IntersectionObserver === 'function') {
+  let tick = 0;
+  const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
+  const draw = () => {
+    const ms = Date.now() - bootedAt;
+    codaTime.textContent = `${pad(ms / 3_600_000)}:${pad((ms / 60_000) % 60)}:${pad((ms / 1000) % 60)}.${pad((ms / 10) % 100)}`;
+    tick = requestAnimationFrame(draw);
+  };
+  new IntersectionObserver(([entry]) => {
+    cancelAnimationFrame(tick);
+    if (entry?.isIntersecting) draw();
+  }).observe(codaTime);
+}
+
+// ---------- whiterose : la pièce cachée ----------
+// Chargée à la demande : rien ne pèse sur le site tant qu'on ne l'appelle pas.
+async function whiterose() {
+  consoleUi.close();
+  const { openWhiterose } = await import('./whiterose/whiterose');
+  world?.setPaused(true);
+  await openWhiterose({
+    bootedAt,
+    reducedMotion: prefersReducedMotion(),
+    log: (level, rule, text) => events.log(level, rule, text, 'pts/0'),
+  });
+  world?.setPaused(false);
+}
 
 // ---------- console du navigateur ----------
 console.log('%c aurele@portfolio %c Tu ouvres la console ? Bon réflexe.', 'background:#e8b04a;color:#111;font-weight:600;padding:2px 4px', 'color:inherit');

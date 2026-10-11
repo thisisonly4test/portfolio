@@ -24,6 +24,8 @@ export interface SceneOptions {
 
 export interface World {
   setProgress: (p: number) => void;
+  /** Suspend le rendu, quand une autre vue couvre l'écran. */
+  setPaused: (paused: boolean) => void;
   destroy: () => void;
 }
 
@@ -463,6 +465,7 @@ export function createWorld(o: SceneOptions): World {
   const clock = new THREE.Clock();
   let elapsed = 0;
   let raf = 0;
+  let paused = false;
   const par = { x: 0, y: 0 };
 
   // Qualité adaptative : si la machine peine, on coupe le flou lumineux puis on baisse la résolution.
@@ -480,7 +483,7 @@ export function createWorld(o: SceneOptions): World {
     raf = requestAnimationFrame(frame);
     const raw = clock.getDelta();
     const dt = Math.min(raw, 0.05);
-    if (document.hidden) return;
+    if (document.hidden || paused) return;
     if (tier < 4) {
       slowTime = raw > 0.034 ? slowTime + raw : Math.max(0, slowTime - raw * 0.5);
       if (slowTime > 1.2) {
@@ -546,6 +549,9 @@ export function createWorld(o: SceneOptions): World {
   return {
     setProgress: (p) => {
       target = Math.max(0, Math.min(p, points.length - 1));
+    },
+    setPaused: (p) => {
+      paused = p;
     },
     destroy: () => {
       cancelAnimationFrame(raf);

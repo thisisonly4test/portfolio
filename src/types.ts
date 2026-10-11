@@ -5,4 +5,5 @@ export type Effect =
   | { type: 'clear' }
   | { type: 'exit' }
   | { type: 'goto'; section: SectionId }
-  | { type: 'reboot' };
+  | { type: 'reboot' }
+  | { type: 'whiterose' };

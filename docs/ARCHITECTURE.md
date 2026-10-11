@@ -50,6 +50,18 @@ Le module 3D est importé dynamiquement : le contenu et le terminal fonctionnent
 - `site/dissect.ts` (pur) : `buildPacket()` assemble la trame et la liste des champs avec leurs plages d'octets ; `internetChecksum()` suit la RFC 1071. Le rendu interactif est dans `widgets.ts` (`renderDissector`).
 - `site/events.ts` : `EventLog`, journal en mémoire avec abonnés ; `classifyCommand()` (pur) associe une commande à une règle et un niveau. `main.ts` journalise l'arrivée, les sauts atteints (`onReach` de `setupJourney`) et les commandes (`onCommand` du terminal). `renderSiem` affiche compteurs, histogramme sur 2 minutes et flux.
 
+## whiterose : la pièce cachée
+
+La commande cachée `whiterose` (effet `{ type: 'whiterose' }`) charge à la demande `src/whiterose/`, son CSS et l'image `src/assets/whiterose-room.webp`. Le site n'en paie rien tant qu'on ne l'appelle pas.
+
+- `geometry.ts` (pur) : cadrages de la caméra en unités de l'image (640 × 361), coins de l'écran du moniteur (`SCREEN`), homographie `quadMatrix()` qui pose un élément HTML sur le verre en `matrix3d`, villes de la carte murale pour `trace`.
+- `crt.ts` (pur) : le shell du moniteur (`runCrt`), ses répliques et l'horloge.
+- `whiterose.ts` : la mise en scène. Fondu au noir, travelling vers l'écran, allumage du tube, puis le terminal ; `exit` ou Échap refont le chemin à l'envers. La scène 3D du site est suspendue pendant la visite (`World.setPaused`).
+
+Si l'image change, remesurer `SCREEN`, `LAMP` et les villes dans `geometry.ts`.
+
+La citation qui clôt le site (`coda()` dans `page.ts`) signe whiterose et sert d'indice.
+
 ## Le shell
 
 - `parser.ts` découpe une ligne (guillemets, `\`, `;`, `&&`).

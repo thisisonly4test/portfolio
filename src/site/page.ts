@@ -122,9 +122,35 @@ export function renderPage(p: Profile, options: RenderOptions = {}): PageHandles
     ),
   );
 
-  const main = h('main', { class: 'hops', id: 'contenu' }, ...sections, footer);
+  const main = h('main', { class: 'hops', id: 'contenu' }, ...sections, coda(), footer);
   const root = h('div', { class: 'site' }, canvas, h('div', { class: 'world-veil', 'aria-hidden': 'true' }), h('a', { class: 'skip', href: '#contenu' }, 'Aller au contenu'), nav, main);
   return { root, nav, canvas, hops, terminalButton };
+}
+
+export const CODA_QUOTE =
+  'Le temps est la seule chose qu’on ne rend jamais. J’ai compté chacune de tes secondes depuis ton arrivée. Toi, tu ne les as pas vues passer.';
+
+/**
+ * Le mot de la fin : une citation signée whiterose. Les mots apparaissent un
+ * à un ; la signature, un curseur qui clignote, laisse deviner la commande.
+ */
+function coda() {
+  const words = CODA_QUOTE.split(' ').map((w, i) => h('span', { class: 'w', style: `--i:${i}` }, w));
+  const quote = h('p', { class: 'coda-quote' });
+  words.forEach((w, i) => quote.append(w, i < words.length - 1 ? ' ' : ''));
+  return h(
+    'figure',
+    { class: 'coda reveal', 'aria-label': 'Citation de whiterose' },
+    h('blockquote', {}, quote),
+    h(
+      'figcaption',
+      { class: 'coda-sign' },
+      h('span', { class: 'coda-dash', 'aria-hidden': 'true' }, '—'),
+      ' whiterose',
+      h('span', { class: 'coda-caret', 'aria-hidden': 'true' }),
+    ),
+    h('p', { class: 'coda-clock', 'aria-hidden': 'true' }, h('span', { class: 'coda-time' }, '00:00:00.00')),
+  );
 }
 
 /** La trame du visiteur : ses vraies valeurs, adresses et ports fictifs. */
