@@ -29,66 +29,25 @@
   inset: 0;
 }
 
-/* L'image, en unités natives (640 × 361) : la caméra la déplace et l'agrandit. */
-.wr-stage {
+/* La pièce en 3D : elle sort du noir, puis s'adoucit quand on fait le point sur l'écran. */
+.wr-canvas {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 640px;
-  height: 361px;
-  transform-origin: 0 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
   opacity: 0;
-  transition: opacity 1.2s ease;
-  /* Bords fondus : la pièce se perd dans le noir au lieu de s'arrêter net. */
-  -webkit-mask-image: radial-gradient(130% 130% at 55% 50%, #000 58%, transparent 74%);
-  mask-image: radial-gradient(130% 130% at 55% 50%, #000 58%, transparent 74%);
+  transition:
+    opacity 1.4s ease,
+    filter 1.8s ease;
 }
 
-.wr.lit .wr-stage {
+.wr.lit .wr-canvas {
   opacity: 1;
 }
 
-.wr-room {
-  display: block;
-  width: 640px;
-  height: 361px;
-  user-select: none;
-  transition: filter 1.6s ease;
-}
-
-/* Profondeur de champ : une fois devant l'écran, la pièce s'efface un peu. */
-.wr.focused .wr-room {
-  filter: blur(0.35px) brightness(0.62) saturate(0.9);
-}
-
-.wr-lamp {
-  position: absolute;
-  width: 220px;
-  height: 220px;
-  margin: -110px 0 0 -110px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 196, 110, 0.38), rgba(255, 170, 80, 0.12) 45%, transparent 75%);
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-
-.wr-monitor-glow {
-  position: absolute;
-  left: 420px;
-  top: 100px;
-  width: 180px;
-  height: 190px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(70, 255, 170, 0.16), transparent 75%);
-  mix-blend-mode: screen;
-  pointer-events: none;
-  animation: wr-hum 3.2s ease-in-out infinite;
-}
-
-@keyframes wr-hum {
-  50% {
-    opacity: 0.75;
-  }
+.wr.focused .wr-canvas {
+  filter: blur(1.4px) brightness(0.72);
 }
 
 /* ---------- traçage sur la carte ---------- */
@@ -96,8 +55,8 @@
 .wr-map {
   position: absolute;
   inset: 0;
-  width: 640px;
-  height: 361px;
+  width: 100%;
+  height: 100%;
   overflow: visible;
   pointer-events: none;
   transition: opacity 0.8s ease;
@@ -110,11 +69,11 @@
 .wr-arc {
   fill: none;
   stroke: #d8ffe9;
-  stroke-width: 0.45;
+  stroke-width: 1.6;
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  filter: drop-shadow(0 0 1.2px #59ffb1);
+  filter: drop-shadow(0 0 4px #59ffb1);
   animation: wr-draw 0.6s ease-out forwards;
 }
 
@@ -126,18 +85,18 @@
 
 .wr-dot {
   fill: #f2fff8;
-  filter: drop-shadow(0 0 1.5px #59ffb1);
+  filter: drop-shadow(0 0 5px #59ffb1);
 }
 
 .wr-dot-end {
   fill: #ff5a5f;
-  filter: drop-shadow(0 0 2px #ff5a5f);
+  filter: drop-shadow(0 0 6px #ff5a5f);
 }
 
 .wr-ping {
   fill: none;
   stroke: #9dffd0;
-  stroke-width: 0.35;
+  stroke-width: 1.4;
   transform-box: fill-box;
   transform-origin: center;
   animation: wr-ping 1.4s ease-out infinite;
@@ -161,12 +120,12 @@
 
 .wr-label {
   font-family: var(--mono);
-  font-size: 3.4px;
+  font-size: 13px;
   letter-spacing: 0.04em;
   fill: #e9fff3;
   paint-order: stroke;
   stroke: rgba(0, 20, 10, 0.85);
-  stroke-width: 0.8px;
+  stroke-width: 3px;
   animation: wr-in 0.4s ease-out both;
 }
 
@@ -488,7 +447,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wr-grain,
-  .wr-monitor-glow,
   .wr-crt::after,
   .wr-ping {
     animation: none;

@@ -1,39 +1,36 @@
-import roomUrl from '../assets/whiterose-room.webp';
 import { h } from '../dom';
 import { BOOT, CRT_COMMANDS, IDLE, clock, runCrt } from './crt';
 import {
   CITIES,
-  IMAGE,
-  LAMP,
-  SCREEN,
   cityForTimeZone,
   easeInOutCubic,
-  mixView,
-  project,
+  mixShot,
   quadMatrix,
-  roomView,
-  screenBox,
-  screenView,
-  stageTransform,
   traceRoute,
-  wallView,
+  wallArc,
+  wallPoint,
   type CityId,
+  type Pt,
   type Quad,
-  type View,
+  type Shot,
+  type Vec3,
 } from './geometry';
+import { createRoom, webglOk, type Room } from './room3d';
 import './whiterose.css';
 
 /**
- * L'endroit caché : la pièce de `whiterose-room.webp`. On y entre depuis le
- * noir, la caméra plonge vers le moniteur, et son écran devient un vrai
- * terminal posé exactement sur le verre (homographie CSS). `exit` ou Échap
- * refont le chemin à l'envers.
+ * L'endroit caché : la pièce de whiterose, en 3D. On y entre depuis le noir,
+ * la caméra avance jusqu'au moniteur, et son écran devient un vrai terminal
+ * posé exactement sur le verre (homographie CSS recalculée à chaque image).
+ * `exit` ou Échap refont le chemin à l'envers.
  */
 
 export interface WhiteroseOptions {
   /** Début de la visite, pour `time`. */
   bootedAt: number;
   reducedMotion: boolean;
+  /** Faux si le visiteur a coupé la 3D du site : l'écran seul, sans la pièce. */
+  allow3d: boolean;
   /** Journal SIEM du site. */
   log?: (level: number, rule: number, text: string) => void;
 }
@@ -42,7 +39,7 @@ type Mode = 'enter' | 'screen' | 'trace' | 'leave';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-const svg = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>) => {
+const svg = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => {
   const el = document.createElementNS(SVG, tag);
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
   return el;
@@ -66,15 +63,11 @@ async function run(o: WhiteroseOptions): Promise<void> {
     }
   })();
   const city = cityForTimeZone(tz);
+  const mobile = matchMedia('(max-width: 860px)').matches;
+  const room: Room | null = o.allow3d && webglOk() ? createRoom({ mobile }) : null;
 
   // ---------- DOM ----------
-  const room = h('img', { class: 'wr-room', src: roomUrl, alt: '', width: IMAGE.w, height: IMAGE.h, decoding: 'async', draggable: 'false' });
-  const lamp = h('div', { class: 'wr-lamp' });
-  lamp.style.left = `${LAMP.x}px`;
-  lamp.style.top = `${LAMP.y}px`;
-  const map = svg('svg', { class: 'wr-map', viewBox: `0 0 ${IMAGE.w} ${IMAGE.h}`, 'aria-hidden': 'true' });
-  const stage = h('div', { class: 'wr-stage' }, room, lamp, h('div', { class: 'wr-monitor-glow' }), map);
-
+  const map = svg('svg', { class: 'wr-map', 'aria-hidden': 'true' });
   const clockEl = h('span', { class: 'wr-clock' });
   const out = h('div', { class: 'wr-out', role: 'log', 'aria-live': 'polite' });
   const typed = h('span', { class: 'wr-typed' });
@@ -90,7 +83,7 @@ async function run(o: WhiteroseOptions): Promise<void> {
   const line = h('div', { class: 'wr-line' }, h('span', { class: 'wr-ps' }, '>'), typed, h('span', { class: 'wr-cursor', 'aria-hidden': 'true' }), input);
   const crt = h('div', { class: 'wr-crt' }, h('div', { class: 'wr-bar' }, h('span', {}, 'WR-OS // nœud inconnu'), clockEl), out, line);
   const screen = h('div', { class: 'wr-screen', hidden: true }, crt);
-  const world = h('div', { class: 'wr-world' }, stage, screen);
+  const world = h('div', { class: 'wr-world' }, room?.canvas ?? null, map, screen);
   const connect = h('p', { class: 'wr-connect' });
   const black = h('div', { class: 'wr-black' }, connect);
   const exitBtn = h('button', { class: 'wr-exit', type: 'button' }, 'Échap · quitter');
@@ -112,9 +105,13 @@ async function run(o: WhiteroseOptions): Promise<void> {
   // ---------- caméra ----------
   let vw = window.innerWidth;
   let vh = window.innerHeight;
+  room?.resize(vw, vh);
   let mode: Mode = 'enter';
-  let view: View = roomView(vw, vh);
-  let tween: { from: View; to: () => View; start: number; dur: number; done: () => void } | null = null;
+  let leaving = false;
+  const fallback = (): Shot => ({ pos: { x: 0, y: 0, z: 1 }, target: { x: 0, y: 0, z: 0 }, fov: 40 });
+  const shotFor = (m: Mode): Shot => (!room ? fallback() : m === 'trace' ? room.shots.wall() : m === 'screen' ? room.shots.screen() : room.shots.room());
+  let shot: Shot = shotFor('enter');
+  let tween: { from: Shot; to: () => Shot; start: number; dur: number; done: () => void } | null = null;
   const pointer = { x: 0.5, y: 0.5 };
   const drift = { x: 0, y: 0 };
   let raf = 0;
@@ -122,37 +119,93 @@ async function run(o: WhiteroseOptions): Promise<void> {
   let lastKey = performance.now();
   let idleShown = false;
 
-  let leaving = false;
-  const target = (): View => (mode === 'trace' ? wallView(vw, vh) : mode === 'screen' ? screenView(vw, vh) : roomView(vw, vh));
-
-  function go(to: () => View, dur: number): Promise<void> {
+  function go(to: () => Shot, dur: number): Promise<void> {
     return new Promise((done) => {
       tween?.done();
-      if (!motion || dur <= 0) {
-        view = to();
+      if (!motion || dur <= 0 || !room) {
+        shot = to();
         tween = null;
         done();
         return;
       }
-      tween = { from: { ...view }, to, start: performance.now(), dur, done };
+      tween = { from: structuredClone(shot), to, start: performance.now(), dur, done };
     });
   }
 
+  let box = { w: 0, h: 0 };
   function sizeScreen() {
-    const box = screenBox(vw, vh);
+    box = room ? room.screenBox() : { w: Math.round(Math.min(vw * 0.92, 720)), h: Math.round(Math.min(vh * 0.72, 540)) };
     screen.style.width = `${box.w}px`;
     screen.style.height = `${box.h}px`;
     screen.style.fontSize = `${Math.max(12, Math.min(22, box.w / 30))}px`;
-    return box;
   }
-  let box = sizeScreen();
+  sizeScreen();
 
+  // Sans WebGL : l'écran seul, à plat, au centre.
+  const flatQuad = (): Quad => {
+    const x = (vw - box.w) / 2;
+    const y = (vh - box.h) / 2;
+    return [
+      { x, y },
+      { x: x + box.w, y },
+      { x: x + box.w, y: y + box.h },
+      { x, y: y + box.h },
+    ];
+  };
+
+  // ---------- traçage : arcs en 3D, projetés en SVG à chaque image ----------
+  interface Mark {
+    p: Vec3;
+    dot: SVGCircleElement;
+    ping: SVGCircleElement;
+    label: SVGTextElement;
+  }
+  const arcs: { pts: Vec3[]; path: SVGPathElement }[] = [];
+  const marks: Mark[] = [];
+  const toPx = (p: Vec3): Pt => (room ? room.project(p) : { x: vw / 2, y: vh / 2 });
+
+  function drawTrace() {
+    for (const a of arcs)
+      a.path.setAttribute(
+        'd',
+        a.pts
+          .map((p, i) => {
+            const q = toPx(p);
+            return `${i ? 'L' : 'M'}${q.x.toFixed(1)} ${q.y.toFixed(1)}`;
+          })
+          .join(''),
+      );
+    for (const m of marks) {
+      const q = toPx(m.p);
+      for (const c of [m.dot, m.ping]) {
+        c.setAttribute('cx', q.x.toFixed(1));
+        c.setAttribute('cy', q.y.toFixed(1));
+      }
+      m.label.setAttribute('x', (q.x + 10).toFixed(1));
+      m.label.setAttribute('y', (q.y - 8).toFixed(1));
+    }
+  }
+
+  // Qualité adaptative : au-delà de 30 ms par image pendant une seconde, on allège.
+  let last = 0;
+  let slow = 0;
+  let tier = 0;
   function frame(now: number) {
     if (!alive) return;
     raf = requestAnimationFrame(frame);
+    const dt = last ? now - last : 16;
+    last = now;
+    if (room && tier < 4) {
+      slow = dt > 30 ? slow + dt : Math.max(0, slow - dt * 0.5);
+      if (slow > 1000) {
+        room.degrade();
+        tier++;
+        slow = 0;
+      }
+    }
     if (tween) {
       const t = Math.min(1, (now - tween.start) / tween.dur);
-      view = mixView(tween.from, tween.to(), easeInOutCubic(t));
+      shot = mixShot(tween.from, tween.to(), easeInOutCubic(t));
       if (t >= 1) {
         const d = tween.done;
         tween = null;
@@ -163,28 +216,27 @@ async function run(o: WhiteroseOptions): Promise<void> {
     // Caméra tenue à la main : une respiration lente et un peu de la souris.
     const settled = mode === 'screen' || mode === 'trace';
     const k = motion && settled ? 1 : 0;
-    drift.x += ((pointer.x - 0.5) * 5 * k - drift.x) * 0.04;
-    drift.y += ((pointer.y - 0.5) * 3.5 * k - drift.y) * 0.04;
+    drift.x += ((pointer.x - 0.5) * k - drift.x) * 0.04;
+    drift.y += ((pointer.y - 0.5) * k - drift.y) * 0.04;
     const s = now / 1000;
-    const v: View = {
-      cx: view.cx + drift.x + (motion ? Math.sin(s * 0.31) * 0.7 : 0),
-      cy: view.cy + drift.y + (motion ? Math.cos(s * 0.23) * 0.45 : 0),
-      z: view.z,
+    const dist = Math.hypot(shot.pos.x - shot.target.x, shot.pos.y - shot.target.y, shot.pos.z - shot.target.z);
+    const amp = dist * 0.035;
+    const breathe = motion ? 1 : 0;
+    const live: Shot = {
+      pos: {
+        x: shot.pos.x + drift.x * amp + Math.sin(s * 0.31) * amp * 0.12 * breathe,
+        y: shot.pos.y - drift.y * amp * 0.7 + Math.cos(s * 0.23) * amp * 0.08 * breathe,
+        z: shot.pos.z,
+      },
+      target: shot.target,
+      fov: shot.fov,
     };
-    stage.style.transform = stageTransform(v, vw, vh);
-    if (!screen.hidden) {
-      const q = SCREEN.map((p) => project(p, v, vw, vh)) as Quad;
-      screen.style.transform = quadMatrix(box.w, box.h, q);
-    }
-
-    // Lampe : un vieux néon, presque stable.
-    if (motion) {
-      const dip = Math.random() < 0.012 ? 0.55 : 1;
-      lamp.style.opacity = String((0.78 + Math.sin(s * 9.3) * 0.04 + Math.sin(s * 23.1) * 0.03) * dip);
-    }
+    room?.render(live, s);
+    if (!screen.hidden) screen.style.transform = quadMatrix(box.w, box.h, room ? room.screenQuad() : flatQuad());
+    if (arcs.length || marks.length) drawTrace();
     clockEl.textContent = clock(new Date());
 
-    if (mode === 'screen' && !idleShown && now - lastKey > 45_000) {
+    if (mode === 'screen' && !booting && !busy && !idleShown && now - lastKey > 45_000) {
       idleShown = true;
       void typeLines(IDLE, 28);
     }
@@ -194,8 +246,9 @@ async function run(o: WhiteroseOptions): Promise<void> {
   const onResize = () => {
     vw = window.innerWidth;
     vh = window.innerHeight;
-    box = sizeScreen();
-    if (!tween) view = target();
+    room?.resize(vw, vh);
+    sizeScreen();
+    if (!tween) shot = shotFor(mode);
   };
   const onPointer = (e: PointerEvent) => {
     pointer.x = e.clientX / vw;
@@ -289,12 +342,8 @@ async function run(o: WhiteroseOptions): Promise<void> {
   input.addEventListener('input', mirror);
   input.addEventListener('keydown', (e) => {
     lastKey = performance.now();
-    if (busy && e.key !== 'Enter') skip = true;
-    if (booting) {
-      skip = true;
-      if (e.key === 'Enter') e.preventDefault();
-      return;
-    }
+    // Une touche pendant une réponse ou le démarrage : on affiche la suite d'un coup.
+    if ((busy || booting) && e.key !== 'Enter') skip = true;
     if (mode !== 'screen') return;
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -323,35 +372,35 @@ async function run(o: WhiteroseOptions): Promise<void> {
 
   async function trace() {
     mode = 'trace';
+    root.classList.remove('focused');
     o.log?.(5, 100401, 'Traçage de route vers le nœud whiterose');
-    await go(() => wallView(vw, vh), 1700);
+    await go(() => shotFor('trace'), 1800);
     const route = traceRoute(city);
     map.replaceChildren();
-    const g = svg('g', { class: 'wr-route' });
-    map.append(g);
     let cancelled = false;
     const cancel = new Promise<void>((r) => (traceSkip = () => ((cancelled = true), r())));
     const sleep = (ms: number) => Promise.race([wait(motion ? ms : 0), cancel]);
+    const at = (id: CityId) => wallPoint(CITIES[id].lon, CITIES[id].lat);
 
     for (let i = 0; i < route.length && !cancelled; i++) {
       const id = route[i] as CityId;
       const c = CITIES[id];
       const last = i === route.length - 1;
       if (i > 0) {
-        const p = CITIES[route[i - 1] as CityId];
-        const len = Math.hypot(c.x - p.x, c.y - p.y);
-        const mid = { x: (p.x + c.x) / 2, y: Math.min(p.y, c.y) - len * 0.18 };
-        const path = svg('path', { class: 'wr-arc', d: `M${p.x} ${p.y} Q${mid.x} ${mid.y} ${c.x} ${c.y}`, pathLength: 1 });
-        g.append(path);
+        const path = svg('path', { class: 'wr-arc', pathLength: 1 });
+        map.append(path);
+        arcs.push({ pts: wallArc(at(route[i - 1] as CityId), at(id)), path });
         await sleep(650);
       }
-      g.append(
-        svg('circle', { class: `wr-ping${last ? ' wr-ping-end' : ''}`, cx: c.x, cy: c.y, r: 1.4 }),
-        svg('circle', { class: `wr-dot${last ? ' wr-dot-end' : ''}`, cx: c.x, cy: c.y, r: 1.1 }),
-      );
-      const label = svg('text', { class: 'wr-label', x: c.x + 2.4, y: c.y - 1.8 });
-      label.textContent = i === 0 ? `${c.name} · toi` : last ? 'nœud ??' : c.name;
-      g.append(label);
+      const mark: Mark = {
+        p: at(id),
+        ping: svg('circle', { class: `wr-ping${last ? ' wr-ping-end' : ''}`, r: 7 }),
+        dot: svg('circle', { class: `wr-dot${last ? ' wr-dot-end' : ''}`, r: 4.5 }),
+        label: svg('text', { class: 'wr-label' }),
+      };
+      mark.label.textContent = i === 0 ? `${c.name} · toi` : last ? 'nœud ??' : c.name;
+      map.append(mark.ping, mark.dot, mark.label);
+      marks.push(mark);
       print(i === 0 ? `  0  ${c.name}  (toi)` : last ? `  ${i}  ???  · 0.000 ms` : `  ${i}  ${c.name}  · ${(18 + i * 37 + Math.random() * 20).toFixed(1)} ms`, last ? 'wr-alert' : 'wr-dim');
       await sleep(last ? 2600 : 420);
     }
@@ -359,7 +408,10 @@ async function run(o: WhiteroseOptions): Promise<void> {
     if (leaving) return;
     map.classList.add('fade');
     mode = 'screen';
-    await go(() => screenView(vw, vh), 1500);
+    root.classList.add('focused');
+    await go(() => shotFor('screen'), 1600);
+    arcs.length = 0;
+    marks.length = 0;
     map.replaceChildren();
     map.classList.remove('fade');
     if (!alive) return;
@@ -368,29 +420,35 @@ async function run(o: WhiteroseOptions): Promise<void> {
 
   // ---------- entrée ----------
   async function enter() {
+    room?.setScreen('text');
     if (motion) {
       await wait(30);
       black.classList.add('on');
       void typeConnect('connexion à whiterose');
     } else black.classList.add('on', 'instant');
-    await Promise.all([room.decode().catch(() => undefined), wait(motion ? 1500 : 0)]);
+    // Le temps de compiler les shaders, derrière le noir.
+    room?.render(shot, 0);
+    await wait(motion ? 1500 : 0);
     if (!alive) return;
-    view = roomView(vw, vh);
     root.classList.add('lit');
     black.classList.remove('on');
-    await wait(motion ? 700 : 0);
-    const focusAt = setTimeout(() => root.classList.add('focused'), motion ? 2000 : 0);
-    await go(() => screenView(vw, vh), 2900);
+    await wait(motion ? 600 : 0);
+    const focusAt = setTimeout(() => root.classList.add('focused'), motion ? 2300 : 0);
+    await go(() => shotFor('screen'), 3200);
     clearTimeout(focusAt);
     if (leaving || !alive) return;
     root.classList.add('focused');
     mode = 'screen';
     screen.hidden = false;
-    box = sizeScreen();
-    requestAnimationFrame(() => screen.classList.add('on'));
+    requestAnimationFrame(() => {
+      screen.classList.add('on');
+      room?.setScreen('off');
+    });
     input.focus({ preventScroll: true });
     await wait(motion ? 650 : 0);
-    await boot();
+    // Le démarrage passe dans la file : une commande tapée pendant ce temps attend son tour.
+    queue = queue.then(boot);
+    await queue;
   }
 
   async function typeConnect(text: string) {
@@ -415,13 +473,14 @@ async function run(o: WhiteroseOptions): Promise<void> {
     skip = true;
     mode = 'leave';
     input.blur();
+    map.classList.add('fade');
     screen.classList.remove('on');
     screen.classList.add('off');
     await wait(motion ? 420 : 0);
     screen.hidden = true;
     root.classList.remove('focused');
-    const fadeAt = setTimeout(() => black.classList.add('on'), motion ? 1100 : 0);
-    await go(() => roomView(vw, vh), 1700);
+    const fadeAt = setTimeout(() => black.classList.add('on'), motion ? 1300 : 0);
+    await go(() => shotFor('leave'), 2000);
     clearTimeout(fadeAt);
     black.classList.add('on');
     connect.textContent = '';
@@ -433,6 +492,7 @@ async function run(o: WhiteroseOptions): Promise<void> {
     window.removeEventListener('keydown', onKey, true);
     root.classList.add('gone');
     await wait(motion ? 450 : 0);
+    room?.dispose();
     root.remove();
     document.documentElement.classList.remove('wr-open');
     lastFocus?.focus({ preventScroll: true });

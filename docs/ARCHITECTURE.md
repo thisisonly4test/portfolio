@@ -52,13 +52,12 @@ Le module 3D est importé dynamiquement : le contenu et le terminal fonctionnent
 
 ## whiterose : la pièce cachée
 
-La commande cachée `whiterose` (effet `{ type: 'whiterose' }`) charge à la demande `src/whiterose/`, son CSS et l'image `src/assets/whiterose-room.webp`. Le site n'en paie rien tant qu'on ne l'appelle pas.
+La commande cachée `whiterose` (effet `{ type: 'whiterose' }`) charge à la demande `src/whiterose/` et son CSS. Le site n'en paie rien tant qu'on ne l'appelle pas.
 
-- `geometry.ts` (pur) : cadrages de la caméra en unités de l'image (640 × 361), coins de l'écran du moniteur (`SCREEN`), homographie `quadMatrix()` qui pose un élément HTML sur le verre en `matrix3d`, villes de la carte murale pour `trace`.
+- `room3d.ts` : la pièce reconstruite en three.js d'après la photo d'origine (bureau, lampe d'architecte, moniteur CRT, carte du monde en points au mur, bibliothèque, câbles). Textures peintes au canvas : rien à télécharger, net à tout zoom. Trois plans de caméra (`room`, `screen`, `wall`) recalculés selon le format de la fenêtre. Qualité adaptative (`degrade`) si la machine peine.
+- `geometry.ts` (pur) : homographie `quadMatrix()` qui pose un élément HTML sur le verre projeté de l'écran, travelling `mixShot()`, cadrage `fitDistance()`, contours des continents et villes de la carte pour `trace`.
 - `crt.ts` (pur) : le shell du moniteur (`runCrt`), ses répliques et l'horloge.
-- `whiterose.ts` : la mise en scène. Fondu au noir, travelling vers l'écran, allumage du tube, puis le terminal ; `exit` ou Échap refont le chemin à l'envers. La scène 3D du site est suspendue pendant la visite (`World.setPaused`).
-
-Si l'image change, remesurer `SCREEN`, `LAMP` et les villes dans `geometry.ts`.
+- `whiterose.ts` : la mise en scène. Fondu au noir, travelling vers l'écran, allumage du tube, puis le terminal ; `exit` ou Échap refont le chemin à l'envers. La scène 3D du site est suspendue pendant la visite (`World.setPaused`). Si le visiteur a coupé la 3D du site, ou sans WebGL, seul l'écran s'affiche, à plat.
 
 La citation tout en bas du site (`coda()` dans `page.ts`), presque invisible, apparaît au survol et sert d'indice.
 

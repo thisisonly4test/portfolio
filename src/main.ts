@@ -125,6 +125,7 @@ async function whiterose() {
   world?.setPaused(true);
   await openWhiterose({
     bootedAt,
+    allow3d: !document.documentElement.classList.contains('no-world'),
     reducedMotion: prefersReducedMotion(),
     log: (level, rule, text) => events.log(level, rule, text, 'pts/0'),
   });

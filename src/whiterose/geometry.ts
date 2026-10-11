@@ -1,10 +1,9 @@
 /**
- * Géométrie de la scène whiterose, en unités de l'image (640 × 361).
+ * Géométrie pure de la pièce whiterose : homographie de l'écran, caméra,
+ * carte murale. Sans three.js ni DOM, pour les tests.
  *
- * La « caméra » est un cadrage : un point de l'image à mettre au centre de
- * la fenêtre et un facteur de zoom. L'écran du moniteur est un quadrilatère
- * légèrement en perspective : on y projette un vrai élément HTML avec une
- * homographie (`matrix3d`), pour que le texte reste net.
+ * Repère de la pièce, en mètres : mur du fond en z = 0 (face vers +z),
+ * sol en y = 0, x vers la droite.
  */
 
 export interface Pt {
@@ -12,78 +11,20 @@ export interface Pt {
   y: number;
 }
 
-/** Coins dans l'ordre : haut gauche, haut droite, bas droite, bas gauche. */
-export type Quad = [Pt, Pt, Pt, Pt];
-
-export interface View {
-  cx: number;
-  cy: number;
+export interface Vec3 {
+  x: number;
+  y: number;
   z: number;
 }
 
-export const IMAGE = { w: 640, h: 361 };
+/** Coins dans l'ordre : haut gauche, haut droite, bas droite, bas gauche. */
+export type Quad = [Pt, Pt, Pt, Pt];
 
-/** Verre de l'écran du moniteur, mesuré sur l'image. */
-export const SCREEN: Quad = [
-  { x: 453, y: 139 },
-  { x: 561, y: 132 },
-  { x: 559, y: 257 },
-  { x: 449, y: 242 },
-];
-
-/** Abat-jour de la lampe : source de la lueur chaude. */
-export const LAMP: Pt = { x: 362, y: 165 };
-
-const SCREEN_CENTER: Pt = {
-  x: SCREEN.reduce((s, p) => s + p.x, 0) / 4,
-  y: SCREEN.reduce((s, p) => s + p.y, 0) / 4,
-};
-const SCREEN_W = (SCREEN[1].x - SCREEN[0].x + SCREEN[2].x - SCREEN[3].x) / 2;
-const SCREEN_H = (SCREEN[3].y - SCREEN[0].y + SCREEN[2].y - SCREEN[1].y) / 2;
-
-const clamp = (v: number, lo: number, hi: number) => (lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v)));
-
-/** Zoom minimal pour que l'image couvre toute la fenêtre. */
-export function coverZoom(vw: number, vh: number): number {
-  return Math.max(vw / IMAGE.w, vh / IMAGE.h);
-}
-
-/** Plan large : toute la pièce, recentrée vers le moniteur sur un écran étroit. */
-export function roomView(vw: number, vh: number): View {
-  const z = coverZoom(vw, vh) * 1.04;
-  return {
-    cx: clamp(SCREEN_CENTER.x, vw / (2 * z), IMAGE.w - vw / (2 * z)),
-    cy: IMAGE.h / 2,
-    z,
-  };
-}
-
-/** Plan serré : l'écran du moniteur occupe l'essentiel de la fenêtre. */
-export function screenView(vw: number, vh: number): View {
-  const z = Math.min((0.7 * vh) / SCREEN_H, (0.9 * vw) / SCREEN_W);
-  return { cx: SCREEN_CENTER.x, cy: SCREEN_CENTER.y - 2, z };
-}
-
-/** Plan sur la carte du mur, assez bas pour garder le haut de l'écran dans le cadre. */
-export function wallView(vw: number, vh: number): View {
-  const z = Math.max(coverZoom(vw, vh), Math.min(vw / 220, vh / 230));
-  return { cx: clamp(508, vw / (2 * z), IMAGE.w - vw / (2 * z)), cy: clamp(112, vh / (2 * z), IMAGE.h - vh / (2 * z)), z };
-}
-
-/** Taille naturelle de l'élément écran : sa taille à l'arrivée, pour un texte à l'échelle 1. */
-export function screenBox(vw: number, vh: number): { w: number; h: number } {
-  const { z } = screenView(vw, vh);
-  return { w: Math.round(SCREEN_W * z), h: Math.round(SCREEN_H * z) };
-}
-
-/** Point de l'image vers la fenêtre, pour un cadrage donné. */
-export function project(p: Pt, v: View, vw: number, vh: number): Pt {
-  return { x: vw / 2 + (p.x - v.cx) * v.z, y: vh / 2 + (p.y - v.cy) * v.z };
-}
-
-/** Transformation CSS de l'image (origine en haut à gauche). */
-export function stageTransform(v: View, vw: number, vh: number): string {
-  return `translate3d(${vw / 2 - v.cx * v.z}px, ${vh / 2 - v.cy * v.z}px, 0) scale(${v.z})`;
+/** Un plan de caméra : position, point visé, champ vertical en degrés. */
+export interface Shot {
+  pos: Vec3;
+  target: Vec3;
+  fov: number;
 }
 
 /**
@@ -120,33 +61,106 @@ export function applyMatrix(css: string, x: number, y: number): Pt {
 
 export const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
-/** Interpolation de cadrage : le zoom en logarithmique, pour un travelling régulier. */
-export function mixView(a: View, b: View, t: number): View {
-  const z = Math.exp(Math.log(a.z) + (Math.log(b.z) - Math.log(a.z)) * t);
-  // Le point visé suit le zoom : la caméra « plonge » au lieu de glisser puis zoomer.
-  const k = a.z === b.z ? t : (1 / a.z - 1 / z) / (1 / a.z - 1 / b.z);
-  return { cx: a.cx + (b.cx - a.cx) * k, cy: a.cy + (b.cy - a.cy) * k, z };
+const lerp = (a: number, b: number, t: number) => a * (1 - t) + b * t;
+const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), z: lerp(a.z, b.z, t) });
+
+/** Travelling entre deux plans : position, visée et focale glissent ensemble. */
+export function mixShot(a: Shot, b: Shot, t: number): Shot {
+  return { pos: lerp3(a.pos, b.pos, t), target: lerp3(a.target, b.target, t), fov: lerp(a.fov, b.fov, t) };
+}
+
+/** Champ vertical qui garde un champ horizontal donné, quel que soit le format. */
+export function fovFor(aspect: number, hfov: number, min = 30, max = 80): number {
+  const v = (2 * Math.atan(Math.tan((hfov * Math.PI) / 360) / aspect) * 180) / Math.PI;
+  return Math.min(max, Math.max(min, v));
+}
+
+/**
+ * Distance qui fait occuper à un rectangle (w × h) au plus `fill` de la
+ * hauteur et 90 % de la largeur de la vue.
+ */
+export function fitDistance(w: number, h: number, fov: number, aspect: number, fill = 0.7): number {
+  const t = Math.tan((fov * Math.PI) / 360);
+  return Math.max(h / (2 * fill * t), w / (2 * 0.9 * t * aspect));
 }
 
 // ---------------------------------------------------------------------------
-// Carte murale : quelques villes, placées à l'œil sur les points de l'image
+// Carte murale : continents en points, comme sur l'affiche lumineuse
 // ---------------------------------------------------------------------------
 
+/** Contours grossiers des terres, en [longitude, latitude]. */
+const LAND: [number, number][][] = [
+  // Amérique du Nord
+  [[-168, 66], [-162, 70], [-140, 70], [-120, 74], [-95, 72], [-80, 73], [-65, 62], [-56, 52], [-66, 45], [-76, 35], [-81, 25], [-90, 29], [-97, 26], [-97, 19], [-88, 15], [-80, 8], [-84, 10], [-92, 15], [-105, 20], [-112, 30], [-117, 32], [-124, 40], [-124, 48], [-135, 58], [-150, 60], [-165, 60]],
+  // Groenland
+  [[-55, 60], [-44, 60], [-20, 70], [-20, 80], [-60, 82], [-70, 77], [-58, 70]],
+  // Amérique du Sud
+  [[-80, 8], [-60, 10], [-50, 0], [-35, -6], [-40, -22], [-48, -28], [-58, -38], [-65, -55], [-72, -50], [-72, -35], [-71, -18], [-81, -5]],
+  // Europe
+  [[-10, 36], [-9, 43], [-2, 44], [-5, 48], [0, 50], [5, 53], [8, 57], [5, 62], [15, 69], [28, 71], [40, 67], [45, 60], [40, 48], [30, 45], [26, 40], [20, 40], [15, 38], [12, 44], [3, 43]],
+  // Îles britanniques
+  [[-6, 50], [2, 51], [0, 54], [-3, 59], [-7, 57], [-5, 54]],
+  // Afrique
+  [[-17, 15], [-17, 21], [-10, 30], [-6, 36], [10, 37], [20, 32], [32, 31], [35, 28], [43, 12], [51, 12], [42, 0], [40, -15], [35, -25], [20, -35], [12, -17], [9, -1], [5, 4], [-8, 4], [-15, 10]],
+  // Madagascar
+  [[44, -25], [50, -15], [49, -12], [43, -17]],
+  // Asie
+  [[26, 40], [36, 36], [35, 30], [44, 12], [56, 22], [60, 25], [67, 24], [72, 20], [77, 8], [80, 15], [90, 22], [98, 16], [100, 3], [104, 1], [105, 10], [109, 18], [121, 30], [122, 40], [130, 43], [142, 47], [142, 53], [160, 60], [180, 66], [180, 72], [140, 73], [110, 77], [80, 73], [68, 70], [60, 68], [45, 68], [40, 67], [45, 60], [40, 48], [30, 45]],
+  // Insulinde
+  [[95, 5], [105, -6], [120, -9], [140, -8], [150, -6], [130, 0], [118, 5], [108, 2], [100, 3]],
+  // Japon
+  [[130, 31], [140, 35], [142, 40], [141, 45], [139, 38], [132, 34]],
+  // Australie
+  [[114, -22], [122, -18], [131, -12], [137, -12], [142, -11], [146, -19], [153, -26], [150, -37], [140, -38], [132, -32], [115, -35]],
+  // Nouvelle-Zélande
+  [[166, -46], [174, -41], [178, -38], [173, -35], [171, -44]],
+];
+
+function inside(lon: number, lat: number, poly: [number, number][]): boolean {
+  let hit = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i]!;
+    const [xj, yj] = poly[j]!;
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
+
+export const isLand = (lon: number, lat: number) => LAND.some((p) => inside(lon, lat, p));
+
+/** Emprise de la carte sur le mur du fond, en mètres. */
+export const MAP = { left: 0.5, right: 2.12, top: 2.16, latTop: 78, latBottom: -56, z: 0.004 };
+const MAP_SCALE = (MAP.right - MAP.left) / 360;
+
+/** Position sur le mur d'un point (longitude, latitude). */
+export function wallPoint(lon: number, lat: number): Vec3 {
+  return { x: MAP.left + (lon + 180) * MAP_SCALE, y: MAP.top - (MAP.latTop - lat) * MAP_SCALE, z: MAP.z };
+}
+
+/** Les points allumés de la carte : une grille régulière sur les terres. */
+export function mapDots(step = 3.6): Vec3[] {
+  const dots: Vec3[] = [];
+  for (let lat = MAP.latTop; lat >= MAP.latBottom; lat -= step) {
+    for (let lon = -180 + step / 2; lon < 180; lon += step) if (isLand(lon, lat)) dots.push(wallPoint(lon, lat));
+  }
+  return dots;
+}
+
 export const CITIES = {
-  paris: { x: 500, y: 26, name: 'Paris' },
-  londres: { x: 496, y: 21, name: 'Londres' },
-  moscou: { x: 521, y: 17, name: 'Moscou' },
-  newyork: { x: 461, y: 43, name: 'New York' },
-  sanfrancisco: { x: 433, y: 47, name: 'San Francisco' },
-  saopaulo: { x: 467, y: 100, name: 'São Paulo' },
-  lagos: { x: 496, y: 69, name: 'Lagos' },
-  johannesburg: { x: 508, y: 105, name: 'Johannesburg' },
-  mumbai: { x: 538, y: 60, name: 'Mumbai' },
-  singapour: { x: 556, y: 75, name: 'Singapour' },
-  pekin: { x: 558, y: 30, name: 'Pékin' },
-  tokyo: { x: 576, y: 28, name: 'Tokyo' },
-  sydney: { x: 584, y: 100, name: 'Sydney' },
-} satisfies Record<string, Pt & { name: string }>;
+  paris: { lon: 2.35, lat: 48.9, name: 'Paris' },
+  londres: { lon: -0.1, lat: 51.5, name: 'Londres' },
+  moscou: { lon: 37.6, lat: 55.75, name: 'Moscou' },
+  newyork: { lon: -74, lat: 40.7, name: 'New York' },
+  sanfrancisco: { lon: -122.4, lat: 37.8, name: 'San Francisco' },
+  saopaulo: { lon: -46.6, lat: -23.5, name: 'São Paulo' },
+  lagos: { lon: 3.4, lat: 6.5, name: 'Lagos' },
+  johannesburg: { lon: 28, lat: -26.2, name: 'Johannesburg' },
+  mumbai: { lon: 72.8, lat: 19, name: 'Mumbai' },
+  singapour: { lon: 103.8, lat: 1.35, name: 'Singapour' },
+  pekin: { lon: 116.4, lat: 39.9, name: 'Pékin' },
+  tokyo: { lon: 139.7, lat: 35.7, name: 'Tokyo' },
+  sydney: { lon: 151.2, lat: -33.9, name: 'Sydney' },
+} satisfies Record<string, { lon: number; lat: number; name: string }>;
 
 export type CityId = keyof typeof CITIES;
 
@@ -178,4 +192,16 @@ export function traceRoute(from: CityId): CityId[] {
   const start = Object.keys(CITIES).indexOf(from) % picked.length;
   const hops = [0, 3, 5].map((i) => picked[(start + i) % picked.length]!);
   return [from, ...hops, from === 'pekin' ? 'tokyo' : 'pekin'];
+}
+
+/** Arc entre deux points du mur, légèrement décollé : points à projeter à l'écran. */
+export function wallArc(a: Vec3, b: Vec3, n = 24): Vec3[] {
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  const pts: Vec3[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const bump = Math.sin(Math.PI * t);
+    pts.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t + bump * len * 0.22, z: a.z + bump * len * 0.12 });
+  }
+  return pts;
 }
