@@ -1,0 +1,11 @@
+notes — migration du serveur web, 2024
+
+[x] copier le site vers web-01
+[x] renouveler le certificat
+[ ] supprimer ce fichier du serveur public
+[ ] arrêter de croire que robots.txt cache quoi que ce soit
+
+FLAG{robots_txt_nest_pas_un_controle_dacces}
+
+robots.txt dit aux moteurs de recherche quoi ne pas indexer.
+Il ne protège rien : n'importe qui peut le lire, et suivre les chemins qu'il liste.

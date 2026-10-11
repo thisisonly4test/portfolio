@@ -1,0 +1,280 @@
+:root {
+  --bg: #17181c;
+  --bg-2: #1c1d22;
+  --panel: #222329;
+  --line: #2f3037;
+  --line-2: #3d3e47;
+  --text: #ececec;
+  --text-2: #a1a1aa;
+  --text-3: #9a9aa4;
+  --code: #121317;
+  --accent: #e8b04a;
+  --ok: #4fbf7f;
+  --err: #e5484d;
+  --dir: #7aa2f7;
+
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --wrap: 1180px;
+  --gutter: clamp(16px, 4vw, 40px);
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px;
+  -webkit-text-size-adjust: 100%;
+}
+
+html.intro-open {
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+svg {
+  display: block;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+::selection {
+  background: var(--accent);
+  color: #111;
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  color: var(--text-2);
+}
+
+.prompt {
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.skip {
+  position: fixed;
+  left: 12px;
+  top: -60px;
+  z-index: 200;
+  padding: 8px 14px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.skip:focus {
+  top: 12px;
+}
+
+/* ---------- boutons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.btn:hover {
+  border-color: var(--text-2);
+}
+
+.btn.primary {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.btn.primary:hover {
+  background: #fff;
+}
+
+.btn.ghost {
+  border-color: transparent;
+  color: var(--text-2);
+}
+
+.btn.ghost:hover {
+  color: var(--text);
+}
+
+.btn.small {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+.btn-icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s var(--ease);
+}
+
+.btn-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.btn:hover .btn-icon,
+a:hover > .btn-icon {
+  transform: translateX(3px);
+}
+
+.link-btn {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 4px;
+}
+
+.link-btn:hover {
+  color: var(--text);
+  text-decoration-color: var(--text-2);
+}
+
+/* ---------- couleurs de la sortie du terminal ---------- */
+
+.t-accent {
+  color: var(--accent);
+}
+.t-dir {
+  color: var(--dir);
+}
+.t-file {
+  color: var(--text);
+}
+.t-hidden,
+.t-muted {
+  color: var(--text-3);
+}
+.t-ok {
+  color: var(--ok);
+}
+.t-warn {
+  color: var(--accent);
+}
+.t-err {
+  color: var(--err);
+}
+.t-bold {
+  color: #fff;
+  font-weight: 600;
+}
+.t-link {
+  color: var(--text);
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre;
+  text-decoration: underline;
+  text-decoration-color: var(--text-3);
+  text-underline-offset: 3px;
+}
+.t-link:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+.t-a {
+  color: var(--dir);
+}
+
+.noscript {
+  max-width: 680px;
+  margin: 12vh auto;
+  padding: 0 24px;
+  font-family: var(--mono);
+  line-height: 1.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

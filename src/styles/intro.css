@@ -1,0 +1,283 @@
+/* ---------- intro : démarrage puis connexion ---------- */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #050505;
+  color: #bdbdbd;
+  font-family: var(--mono);
+  transition: clip-path 0.75s var(--ease), opacity 0.35s;
+  clip-path: inset(0 0 0 0);
+}
+
+.intro.leaving {
+  clip-path: inset(0 0 100% 0);
+  pointer-events: none;
+}
+
+.intro-skip {
+  position: absolute;
+  right: 20px;
+  bottom: 18px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #6b6b74;
+  transition: color 0.2s;
+  animation: fade 0.5s 0.6s both;
+}
+
+.intro-skip:hover {
+  color: #ececec;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Messages de démarrage */
+
+.boot {
+  position: absolute;
+  inset: 0;
+  padding: 24px 28px 72px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.5;
+  transition: opacity 0.25s;
+}
+
+.boot.done {
+  opacity: 0;
+}
+
+.boot-log > div {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.boot .ts {
+  color: #5b5b62;
+}
+
+.boot b {
+  color: #fff;
+  font-weight: 500;
+}
+
+.boot .welcome b {
+  color: var(--accent);
+}
+
+.boot .st {
+  display: inline-block;
+  white-space: pre;
+}
+
+.boot .st.ok {
+  color: var(--ok);
+}
+
+.boot .st.wait {
+  width: 6ch;
+}
+
+.boot .s1 {
+  color: #5a1c1e;
+}
+.boot .s2 {
+  color: #a3272b;
+}
+.boot .s3 {
+  color: var(--err);
+}
+
+/* Connexion */
+
+.login {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  animation: fade 0.5s both;
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 64px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 64px 100%,
+    #070708;
+  background-blend-mode: normal;
+}
+
+.login::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 50% 50%, transparent, #050505 85%);
+  pointer-events: none;
+}
+
+.login-bar,
+.login-foot {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 24px;
+  font-size: 12px;
+  color: #6b6b74;
+  letter-spacing: 0.04em;
+}
+
+.login-foot {
+  justify-content: flex-start;
+}
+
+.login-panel {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.user {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 26px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.user:hover,
+.user:focus-visible {
+  border-color: var(--line-2);
+  background: rgba(255, 255, 255, 0.02);
+  outline: none;
+}
+
+.user-avatar {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  font-size: 30px;
+  font-weight: 500;
+  color: var(--text);
+  text-transform: lowercase;
+  transition: border-color 0.3s;
+}
+
+.login-panel.ok .user-avatar {
+  border-color: var(--ok);
+}
+
+.user-name {
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.pw-field {
+  display: flex;
+  align-items: center;
+  width: 240px;
+  height: 0;
+  overflow: hidden;
+  border-bottom: 1px solid transparent;
+  color: var(--text);
+  letter-spacing: 0.3em;
+  transition: height 0.3s var(--ease), border-color 0.3s;
+}
+
+.login-panel.typing .pw-field {
+  height: 34px;
+  border-color: var(--line-2);
+}
+
+.login-panel.auth .pw-field {
+  border-color: var(--accent);
+}
+
+.login-panel.ok .pw-field {
+  border-color: var(--ok);
+}
+
+.caret {
+  width: 8px;
+  height: 16px;
+  background: var(--accent);
+  animation: blink 1s steps(1) infinite;
+}
+
+.login-panel.ok .caret {
+  display: none;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.login-status {
+  font-size: 12.5px;
+  color: #6b6b74;
+  min-height: 20px;
+}
+
+.login-panel.ok .login-status {
+  color: var(--ok);
+}
+
+@media (max-width: 640px) {
+  .boot {
+    padding: 16px 14px 64px;
+    font-size: 10.5px;
+  }
+}
+
+.login.tracing .login-panel,
+.login.tracing .login-foot {
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.trace {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text);
+  white-space: pre;
+}
+
+.trace p {
+  animation: fade 0.2s both;
+}
+
+.trace-dim {
+  color: #6b6b74;
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .trace {
+    font-size: 11px;
+  }
+}
