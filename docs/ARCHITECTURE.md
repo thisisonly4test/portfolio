@@ -36,7 +36,7 @@ La page est rendue tout de suite, sous l'intro : elle est prête quand l'intro s
 4. À chaque image, la scène amortit l'avancement (`damp`), place le paquet et sa traînée, puis met la caméra derrière lui et légèrement au-dessus. La souris ajoute un peu de parallaxe. Sur grand écran, `setViewOffset` décale le sujet vers la droite, loin du texte.
 5. Qualité adaptative : après plus d'une seconde d'images lentes (> 34 ms), le bloom se coupe, puis la résolution baisse par paliers (`canvas.dataset.quality`).
 
-Le module 3D est importé dynamiquement : le contenu, le terminal et le CTF fonctionnent sans lui (absence de WebGL, `?world=off`, ou bouton « Désactiver la 3D »).
+Le module 3D est importé dynamiquement : le contenu et le terminal fonctionnent sans lui (absence de WebGL, `?world=off`, ou bouton « Désactiver la 3D »).
 
 ### Ajouter un saut
 
@@ -45,13 +45,10 @@ Le module 3D est importé dynamiquement : le contenu, le terminal et le CTF fonc
 3. Si l'équipement n'existe pas, lui donner une position dans `STATION_POSITIONS` (`src/scene/path.ts`, toujours plus loin vers −z) et une forme dans le `switch` de `createWorld`.
 4. Écrire son rendu dans `renderHop` (`src/site/page.ts`).
 
-## Sécurité : dissecteur, SIEM, CTF
+## Sécurité : dissecteur, SIEM
 
 - `site/dissect.ts` (pur) : `buildPacket()` assemble la trame et la liste des champs avec leurs plages d'octets ; `internetChecksum()` suit la RFC 1071. Le rendu interactif est dans `widgets.ts` (`renderDissector`).
-- `site/events.ts` : `EventLog`, journal en mémoire avec abonnés ; `classifyCommand()` (pur) associe une commande à une règle et un niveau. `main.ts` journalise l'arrivée, les sauts atteints (`onReach` de `setupJourney`), les commandes (`onCommand` du terminal) et les flags. `renderSiem` affiche compteurs, histogramme sur 2 minutes et flux.
-- `site/ctf.ts` : défis (titre, indice, empreinte SHA-256, points), validation par `crypto.subtle`, progression dans `localStorage`. Les flags eux-mêmes sont plantés dans `index.html`, `public/robots.txt` et `public/backup-2024/`, le système de fichiers virtuel, la zone DNS de `dig` et `window.aurele` dans `main.ts`.
-
-Pour changer un flag : modifier l'endroit où il est planté, recalculer son empreinte (`printf '%s' 'FLAG{...}' | sha256sum`) et la reporter dans `CHALLENGES`. Le test « chaque flag planté dans le site correspond à un défi » échoue tant que les deux ne concordent pas.
+- `site/events.ts` : `EventLog`, journal en mémoire avec abonnés ; `classifyCommand()` (pur) associe une commande à une règle et un niveau. `main.ts` journalise l'arrivée, les sauts atteints (`onReach` de `setupJourney`) et les commandes (`onCommand` du terminal). `renderSiem` affiche compteurs, histogramme sur 2 minutes et flux.
 
 ## Le shell
 
@@ -62,5 +59,5 @@ Pour changer un flag : modifier l'endroit où il est planté, recalculer son emp
 
 ## Tests
 
-- `tests/unit/` (Vitest) : sommes de contrôle et trame, CTF (empreintes, flags plantés, stockage), journal SIEM, DNS, parseur, système de fichiers, shell et complétion, séquence de démarrage, graphe et avancement du trajet, empreinte du navigateur, stockage, et avec jsdom le rendu de la page et le terminal.
-- `tests/e2e/` (Playwright, Chrome bureau et Pixel 7). Le rendu WebGL logiciel des navigateurs de test est très lent : la 3D y est désactivée, sauf dans le test `[3d]` (chargement, suivi du défilement, bouton de désactivation). Le reste couvre : intro complète, connexion au clic et au clavier, saut de l'intro, rejouer l'intro, traversée de tous les équipements, empreinte, projets dépliables, terminal (bouton, touche, `goto`, Échap), dissecteur et chiffrement, validation d'un flag, alertes SIEM, panneau CTF, fichiers servis (`robots.txt`, sauvegarde), objet `window.aurele`, menu mobile, absence d'erreur et de défilement horizontal.
+- `tests/unit/` (Vitest) : sommes de contrôle et trame, journal SIEM, DNS, parseur, système de fichiers, shell et complétion, séquence de démarrage, graphe et avancement du trajet, empreinte du navigateur, stockage, et avec jsdom le rendu de la page et le terminal.
+- `tests/e2e/` (Playwright, Chrome bureau et Pixel 7). Le rendu WebGL logiciel des navigateurs de test est très lent : la 3D y est désactivée, sauf dans le test `[3d]` (chargement, suivi du défilement, bouton de désactivation). Le reste couvre : intro complète, connexion au clic et au clavier, saut de l'intro, rejouer l'intro, traversée de tous les équipements, empreinte, projets dépliables, terminal (bouton, touche, `goto`, Échap), dissecteur et chiffrement, alertes SIEM, menu mobile, absence d'erreur et de défilement horizontal.

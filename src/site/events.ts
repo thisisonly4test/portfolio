@@ -1,6 +1,6 @@
 /**
  * Journal de sécurité du site. Ce que fait le visiteur (entrer, lire une
- * section, taper une commande, trouver un flag) devient un événement façon
+ * section, taper une commande) devient un événement façon
  * SIEM, affiché au saut `siem`. Tout reste en mémoire, dans le navigateur.
  */
 
@@ -59,7 +59,6 @@ export function classifyCommand(line: string): { level: number; rule: number; te
     [/\/etc\/shadow/, 10, 5710, 'Tentative de lecture des empreintes de mots de passe'],
     [/^(sudo|please)\b/, 5, 5401, 'Élévation de privilèges demandée (sudo)'],
     [/^nmap\b/, 6, 40101, 'Scan de ports détecté'],
-    [/^submit\b/, 3, 100200, 'Soumission d’un flag'],
     [/^(cd|ls)\s+\/root\b/, 7, 5902, 'Accès refusé au dossier de root'],
     [/^ls\b.*-\w*a/, 2, 100301, 'Énumération des fichiers cachés'],
     [/^dig\b/, 2, 100302, 'Requête DNS'],

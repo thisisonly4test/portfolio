@@ -1,5 +1,4 @@
 import { contactLinks, SECTIONS, type SectionId } from '../data/profile';
-import { rot13 } from '../site/ctf';
 import { c, cmdLink, esc, formatDuration } from './format';
 import { splitFlags } from './parser';
 import type { Command, CommandContext } from './shell';
@@ -288,26 +287,6 @@ export const commands: Record<string, Command> = {
     },
   },
 
-  submit: {
-    summary: 'Valide un flag du CTF (submit FLAG{...})',
-    usage: 'submit FLAG{...}',
-    run(args, ctx) {
-      const flag = args.join(' ');
-      if (!flag) {
-        ctx.out('usage : submit FLAG{...}');
-        return 1;
-      }
-      ctx.effect({ type: 'submit', flag });
-    },
-  },
-
-  ctf: {
-    summary: 'Les défis cachés dans ce site',
-    run(_args, ctx) {
-      ctx.effect({ type: 'ctf' });
-    },
-  },
-
   reboot: {
     summary: "Rejoue l'intro",
     run(_args, ctx) {
@@ -424,7 +403,7 @@ export const commands: Record<string, Command> = {
           A: ['10.0.20.10'],
           NS: ['srv-ad.aurele.lan.'],
           MX: ['10 mail.aurele.lan.'],
-          TXT: ['"v=spf1 mx -all"', `"note=${rot13('FLAG{les_enregistrements_txt_parlent}')}"`],
+          TXT: ['"v=spf1 mx -all"'],
         },
         'web-01.aurele.lan': { A: ['172.16.0.10'] },
         'srv-ad.aurele.lan': { A: ['10.0.20.10'] },

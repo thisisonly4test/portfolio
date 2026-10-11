@@ -1,5 +1,2 @@
 User-agent: *
 Allow: /
-
-# Ancienne sauvegarde, à ne surtout pas indexer.
-Disallow: /backup-2024/notes.txt

@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { profile } from '../../src/data/profile';
 import { stripTags } from '../../src/shell/format';
 import { Shell } from '../../src/shell/shell';
 import { buildFS } from '../../src/shell/vfs';
-import { CHALLENGES, Ctf, rot13, sha256Hex } from '../../src/site/ctf';
 import { buildPacket, hexRows, internetChecksum, ipBytes } from '../../src/site/dissect';
 import { classifyCommand, EventLog } from '../../src/site/events';
 
@@ -81,60 +78,6 @@ describe('trame du visiteur', () => {
     expect(rows[0]!.offset).toBe('0000');
     expect(rows[1]!.offset).toBe('0010');
     expect(rows.flatMap((r) => r.bytes)).toHaveLength(b.length);
-  });
-});
-
-describe('CTF', () => {
-  beforeEach(() => localStorage.clear());
-
-  it('calcule le SHA-256 comme Node', async () => {
-    expect(await sha256Hex('abc')).toBe(createHash('sha256').update('abc').digest('hex'));
-  });
-
-  it('chaque flag planté dans le site correspond à un défi', async () => {
-    const html = readFileSync('index.html', 'utf8');
-    const b64 = /debug: ([A-Za-z0-9+/=]+)/.exec(html)![1]!;
-    const robots = readFileSync('public/backup-2024/notes.txt', 'utf8');
-    const shell = new Shell(buildFS(profile), profile);
-    const secret = stripTags(shell.run('cat ~/.secret').lines.join('\n'));
-    const dns = stripTags(shell.run('dig aurele.lan TXT').lines.join('\n'));
-    const main = readFileSync('src/main.ts', 'utf8');
-    const hex = /return '([0-9a-f]{40,})'/.exec(main)![1]!;
-
-    const flags = [
-      /FLAG\{[^}]+\}/.exec(secret)![0],
-      atob(b64),
-      /FLAG\{[^}]+\}/.exec(robots)![0],
-      rot13(/note=(SYNT\{[^}]+\})/.exec(dns)![1]!),
-      new TextDecoder().decode(Uint8Array.from(hex.match(/../g)!.map((x) => parseInt(x, 16)))),
-    ];
-    const hashes = await Promise.all(flags.map(sha256Hex));
-    expect(hashes).toEqual(CHALLENGES.map((c) => c.sha256));
-  });
-
-  it('valide, refuse et mémorise', async () => {
-    const ctf = new Ctf();
-    expect((await ctf.submit('n’importe quoi')).status).toBe('invalid');
-    expect((await ctf.submit('FLAG{faux}')).status).toBe('invalid');
-    const ok = await ctf.submit(' FLAG{ls_-a_est_un_reflexe} ');
-    expect(ok).toMatchObject({ status: 'ok', total: 1 });
-    expect((await ctf.submit('FLAG{ls_-a_est_un_reflexe}')).status).toBe('already');
-    expect(ctf.score).toBe(10);
-    expect(new Ctf().foundIds).toEqual(['hidden']);
-    ctf.reset();
-    expect(new Ctf().foundIds).toEqual([]);
-  });
-
-  it('ignore un stockage corrompu', () => {
-    localStorage.setItem('aurele:flags', '{oups');
-    expect(new Ctf().foundIds).toEqual([]);
-    localStorage.setItem('aurele:flags', JSON.stringify(['hidden', 'inconnu', 42]));
-    expect(new Ctf().foundIds).toEqual(['hidden']);
-  });
-
-  it('rot13 est sa propre réciproque', () => {
-    expect(rot13(rot13('FLAG{Abc_xyz}'))).toBe('FLAG{Abc_xyz}');
-    expect(rot13('FLAG')).toBe('SYNT');
   });
 });
 

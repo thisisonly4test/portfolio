@@ -38,8 +38,8 @@ describe('Shell', () => {
     const plain = run('ls').text;
     expect(plain).toContain('projets/');
     expect(plain).toContain('veille.md');
-    expect(plain).not.toContain('.secret');
-    expect(run('ls -a').text).toContain('.secret');
+    expect(plain).not.toContain('.bashrc');
+    expect(run('ls -a').text).toContain('.bashrc');
     expect(run('ls -l projets').text).toMatch(/^drwxr-x--- .* databroke\/$/m);
     expect(run('ls /inexistant').text).toContain("impossible d'accéder");
   });
@@ -172,7 +172,7 @@ describe('complétion', () => {
 
   it('montre les fichiers cachés quand le préfixe commence par un point', () => {
     const { shell } = setup();
-    expect(shell.complete('cat .se').value).toBe('cat .secret ');
+    expect(shell.complete('cat .ba').value).toBe('cat .bashrc ');
   });
 
   it('ne change rien sans correspondance', () => {

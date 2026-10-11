@@ -5,6 +5,4 @@ export type Effect =
   | { type: 'clear' }
   | { type: 'exit' }
   | { type: 'goto'; section: SectionId }
-  | { type: 'reboot' }
-  | { type: 'submit'; flag: string }
-  | { type: 'ctf' };
+  | { type: 'reboot' };

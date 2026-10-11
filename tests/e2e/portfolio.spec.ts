@@ -177,10 +177,9 @@ test('mobile seulement : le menu ouvre la navigation', async ({ page, isMobile }
   await expect(page.locator('#contact .hop-head')).toBeInViewport();
 });
 
-test.describe('sécurité et CTF', () => {
+test.describe('sécurité', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?intro=skip');
-    await page.evaluate(() => localStorage.removeItem('aurele:flags'));
   });
 
   test('le dissecteur chiffre puis déchiffre la charge utile', async ({ page }) => {
@@ -194,20 +193,6 @@ test.describe('sécurité et CTF', () => {
     await expect(dx.locator('.dx-bytes span.enc')).toHaveCount(0, { timeout: 3_000 });
   });
 
-  test('un flag trouvé dans le terminal est validé et compté', async ({ page }) => {
-    await page.locator('.nav-term').click();
-    const input = page.locator('.console .term-input');
-    await input.fill('cat .secret');
-    await input.press('Enter');
-    const flag = (await page.locator('.console .term-out').textContent())!.match(/FLAG\{[^}]+\}/)![0];
-    await input.fill(`submit ${flag}`);
-    await input.press('Enter');
-    await expect(page.locator('.console .term-out')).toContainText('Flag correct');
-    await expect(page.locator('.ctf-count')).toHaveText('1/5');
-    await page.reload();
-    await expect(page.locator('.ctf-count')).toHaveText('1/5');
-  });
-
   test('les commandes sensibles remontent dans le SIEM', async ({ page }) => {
     await page.locator('.nav-term').click();
     const input = page.locator('.console .term-input');
@@ -217,24 +202,5 @@ test.describe('sécurité et CTF', () => {
     await page.keyboard.press('Escape');
     await expect(page.locator('.feed')).toContainText('empreintes de mots de passe');
     await expect(page.locator('.k-alerts strong')).toHaveText('1');
-  });
-
-  test('le panneau CTF liste cinq défis', async ({ page }) => {
-    await page.locator('.ctf-pill').click();
-    await expect(page.locator('.ctf-list li')).toHaveCount(5);
-    await page.keyboard.press('Escape');
-    await expect(page.locator('.ctf-panel')).toBeHidden();
-  });
-
-  test('robots.txt et la sauvegarde oubliée sont servis', async ({ request }) => {
-    const robots = await (await request.get('/robots.txt')).text();
-    expect(robots).toContain('Disallow: /backup-2024/notes.txt');
-    expect(await (await request.get('/backup-2024/notes.txt')).text()).toContain('FLAG{');
-    expect(await (await request.get('/')).text()).toContain('debug: ');
-  });
-
-  test('l’objet window.aurele répond dans la console', async ({ page }) => {
-    const hex = await page.evaluate(() => (window as unknown as { aurele: { secret: () => string } }).aurele.secret());
-    expect(hex).toMatch(/^[0-9a-f]+$/);
   });
 });

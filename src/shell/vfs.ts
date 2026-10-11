@@ -159,16 +159,6 @@ export function buildFS(p: Profile): VirtualFS {
       '.bashrc',
       ['# ~/.bashrc', "alias ll='ls -la'", 'export EDITOR=vim', 'umask 027'].join('\n'),
     ),
-    file(
-      '.secret',
-      [
-        "Joli réflexe, ls -a. C'est la première chose à faire sur une machine qu'on découvre.",
-        '',
-        'FLAG{ls_-a_est_un_reflexe}',
-        '',
-        'Valide-le avec : submit FLAG{...}. Il en reste quatre. La commande ctf donne des indices.',
-      ].join('\n'),
-    ),
     dir('projets', p.projects.map((proj) => dir(proj.id, [file('README.md', projectReadme(proj))]))),
   ];
   if (p.certifications.length) {

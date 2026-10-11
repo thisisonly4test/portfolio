@@ -6,14 +6,12 @@ import './styles/widgets.css';
 import { profile } from './data/profile';
 import { prefersReducedMotion } from './dom';
 import { runIntro } from './intro/intro';
-import { esc } from './shell/format';
 import { buildFS } from './shell/vfs';
 import { createConsole } from './site/console';
-import { Ctf } from './site/ctf';
 import { setupJourney, setupReveal } from './site/effects';
 import { classifyCommand, events } from './site/events';
 import { renderPage } from './site/page';
-import { createToaster, renderCtf, scramble } from './site/widgets';
+import { createToaster, scramble } from './site/widgets';
 import { forgetIntro, introSeen, markIntroSeen, setWorldDisabled, worldDisabled } from './storage';
 
 /**
@@ -31,7 +29,6 @@ import { forgetIntro, introSeen, markIntroSeen, setWorldDisabled, worldDisabled 
 const app = document.getElementById('app')!;
 const params = new URLSearchParams(location.search);
 const bootedAt = Date.now();
-const ctf = new Ctf();
 const toaster = createToaster();
 
 events.log(3, 100010, 'Nouvelle connexion entrante, port 443', 'fw-01');
@@ -108,10 +105,7 @@ const consoleUi = createConsole({
     else if (e.type === 'reboot') {
       consoleUi.close();
       setTimeout(() => void intro(true), 250);
-    } else if (e.type === 'ctf') {
-      consoleUi.close();
-      ctfUi.pill.click();
-    } else if (e.type === 'submit') void submitFlag(e.flag);
+    }
   },
 });
 app.append(...consoleUi.elements);
@@ -122,44 +116,9 @@ page.root.querySelector('[data-action="replay"]')?.addEventListener('click', () 
   void intro(true);
 });
 
-// ---------- CTF ----------
-const ctfUi = renderCtf(ctf, () => consoleUi.open());
-page.nav.querySelector('.nav-actions')!.prepend(ctfUi.pill);
-app.append(ctfUi.panel);
-
-async function submitFlag(flag: string) {
-  const out = (html: string) => consoleUi.terminal.printLines(html);
-  const result = await ctf.submit(flag);
-  if (result.status === 'invalid') {
-    out('<span class="t-err">Flag invalide.</span> <span class="t-muted">Format attendu : FLAG{...}</span>');
-    events.log(5, 100201, 'Flag invalide soumis', 'pts/0');
-  } else if (result.status === 'already') {
-    out(`<span class="t-muted">Déjà validé : ${esc(result.challenge.title)}.</span>`);
-  } else {
-    out(`<span class="t-ok">Flag correct : ${esc(result.challenge.title)} (+${result.challenge.points} pts). ${result.total}/5.</span>`);
-    events.log(3, 100202, `Flag validé : ${result.challenge.title}`, 'pts/0');
-    toaster.push(`⚑ ${result.total}/5 · ${result.challenge.title}`, ctf.complete ? 'Les cinq. Bien joué. Ouvre le panneau CTF.' : `+${result.challenge.points} points.`);
-  }
-}
-
-// ---------- console du navigateur : flag n°5 ----------
-const banner = [
-  '%c aurele@portfolio %c',
-  'Tu ouvres la console ? Bon réflexe.',
-  'Un objet t’attend : window.aurele. Commence par aurele.help().',
-].join('\n');
-console.log(banner, 'background:#e8b04a;color:#111;font-weight:600;padding:2px 4px', 'color:inherit');
-Object.assign(window, {
-  forgetIntro,
-  aurele: {
-    help: () => 'Méthodes : aurele.whoami(), aurele.secret(). Le reste se décode.',
-    whoami: () => `${profile.username} — ${profile.role}`,
-    secret: () => {
-      events.log(3, 100203, 'Objet window.aurele interrogé depuis la console', 'devtools');
-      return '464c41477b6c615f636f6e736f6c655f61757373695f615f6465735f6f7265696c6c65737d';
-    },
-  },
-});
+// ---------- console du navigateur ----------
+console.log('%c aurele@portfolio %c Tu ouvres la console ? Bon réflexe.', 'background:#e8b04a;color:#111;font-weight:600;padding:2px 4px', 'color:inherit');
+Object.assign(window, { forgetIntro });
 
 // ---------- intro ----------
 async function intro(force = false) {

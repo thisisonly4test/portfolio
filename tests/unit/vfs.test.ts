@@ -41,8 +41,8 @@ describe('buildFS', () => {
   });
 
   it('masque les fichiers cachés sauf demande', () => {
-    expect(fs.list(HOME).some((n) => n.name === '.secret')).toBe(false);
-    expect(fs.list(HOME, true).some((n) => n.name === '.secret')).toBe(true);
+    expect(fs.list(HOME).some((n) => n.name === '.bashrc')).toBe(false);
+    expect(fs.list(HOME, true).some((n) => n.name === '.bashrc')).toBe(true);
   });
 
   it('trie les dossiers avant les fichiers', () => {

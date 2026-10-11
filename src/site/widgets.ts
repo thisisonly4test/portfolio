@@ -1,5 +1,4 @@
 import { h, prefersReducedMotion } from '../dom';
-import { CHALLENGES, type Ctf } from './ctf';
 import { hexRows, printable, type Field, type Layer, type Packet } from './dissect';
 import type { EventLog, SecEvent } from './events';
 
@@ -197,73 +196,6 @@ export function renderSiem(log: EventLog): HTMLElement {
     rows,
     h('p', { class: 'siem-note' }, 'Chaque ligne est une de tes actions sur ce site. Ouvre le terminal et essaie ', h('code', {}, 'cat /etc/shadow'), ' pour déclencher une alerte. Rien ne sort de ton navigateur.'),
   );
-}
-
-// ---------------------------------------------------------------------------
-// CTF : pastille dans la navigation et panneau des défis
-// ---------------------------------------------------------------------------
-
-export function renderCtf(ctf: Ctf, openTerminal: () => void): { pill: HTMLButtonElement; panel: HTMLElement } {
-  const count = h('span', { class: 'ctf-count' });
-  const pill = h('button', { class: 'ctf-pill', type: 'button', 'aria-haspopup': 'dialog', title: 'Mini-CTF caché dans le site' }, h('span', { class: 'ctf-flag' }, '⚑'), count);
-  const list = h('ol', { class: 'ctf-list' });
-  const score = h('p', { class: 'ctf-score' });
-  const panel = h(
-    'div',
-    { class: 'ctf-panel', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Mini-CTF', hidden: true },
-    h(
-      'div',
-      { class: 'ctf-box' },
-      h('header', {}, h('p', { class: 'ctf-kicker' }, 'capture the flag'), h('h3', {}, 'Cinq flags sont cachés dans ce site.'), h('p', {}, 'Format : ', h('code', {}, 'FLAG{...}'), '. Valide-les dans le terminal avec ', h('code', {}, 'submit FLAG{...}'), '. Aucun outil requis : un navigateur et de la curiosité.')),
-      list,
-      score,
-      h(
-        'footer',
-        {},
-        h('button', { class: 'btn primary small', type: 'button', 'data-ctf': 'terminal' }, 'Ouvrir le terminal'),
-        h('button', { class: 'btn ghost small', type: 'button', 'data-ctf': 'close' }, 'Fermer'),
-      ),
-    ),
-  );
-
-  const render = () => {
-    const found = new Set(ctf.foundIds);
-    count.textContent = found.size ? `${found.size}/${CHALLENGES.length}` : 'CTF';
-    pill.classList.toggle('done', ctf.complete);
-    list.replaceChildren(
-      ...CHALLENGES.map((c, i) =>
-        h(
-          'li',
-          { class: found.has(c.id) ? 'found' : '' },
-          h('span', { class: 'ctf-n' }, found.has(c.id) ? '✓' : String(i + 1).padStart(2, '0')),
-          h('div', {}, h('strong', {}, c.title, h('em', {}, ` ${c.points} pts`)), h('p', {}, c.hint)),
-        ),
-      ),
-    );
-    score.textContent = ctf.complete
-      ? `${ctf.score}/${ctf.maxScore} points. Tous trouvés. Écris-moi avec l’objet « root@aurele » : je saurai.`
-      : `${ctf.score}/${ctf.maxScore} points.`;
-  };
-  render();
-  ctf.subscribe(render);
-
-  const close = () => (panel.hidden = true);
-  pill.addEventListener('click', () => {
-    panel.hidden = false;
-    panel.querySelector<HTMLButtonElement>('[data-ctf="terminal"]')?.focus();
-  });
-  panel.addEventListener('click', (e) => {
-    const action = (e.target as HTMLElement).closest<HTMLElement>('[data-ctf]')?.dataset.ctf;
-    if (e.target === panel || action === 'close') close();
-    if (action === 'terminal') {
-      close();
-      openTerminal();
-    }
-  });
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !panel.hidden) close();
-  });
-  return { pill, panel };
 }
 
 // ---------------------------------------------------------------------------
