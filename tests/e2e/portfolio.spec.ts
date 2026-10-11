@@ -206,13 +206,16 @@ test.describe('sécurité', () => {
 });
 
 test.describe('whiterose', () => {
-  test('la citation finale signe whiterose', async ({ page }) => {
+  test('la citation du bas reste discrète, puis apparaît au survol', async ({ page, isMobile }) => {
     await page.goto('/?intro=skip');
     const coda = page.locator('.coda');
     await coda.scrollIntoViewIfNeeded();
-    await expect(coda).toHaveClass(/in/);
-    await expect(coda.locator('.coda-sign')).toContainText('whiterose');
-    await expect(coda.locator('.coda-time')).not.toHaveText('00:00:00.00');
+    await expect(coda).toContainText('Chaque seconde compte');
+    const opacity = () => coda.evaluate((el) => Number(getComputedStyle(el).opacity));
+    expect(await opacity()).toBeLessThan(0.1);
+    if (isMobile) await coda.tap();
+    else await coda.hover();
+    await expect.poll(opacity, { timeout: 4_000 }).toBeGreaterThan(0.5);
   });
 
   test('la commande ouvre la pièce, son terminal répond, Échap ramène au site', async ({ page }) => {

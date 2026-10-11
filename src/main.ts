@@ -117,22 +117,6 @@ page.root.querySelector('[data-action="replay"]')?.addEventListener('click', () 
   void intro(true);
 });
 
-// ---------- le mot de la fin : le temps passé ici, au centième ----------
-const codaTime = page.root.querySelector<HTMLElement>('.coda-time');
-if (codaTime && typeof IntersectionObserver === 'function') {
-  let tick = 0;
-  const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
-  const draw = () => {
-    const ms = Date.now() - bootedAt;
-    codaTime.textContent = `${pad(ms / 3_600_000)}:${pad((ms / 60_000) % 60)}:${pad((ms / 1000) % 60)}.${pad((ms / 10) % 100)}`;
-    tick = requestAnimationFrame(draw);
-  };
-  new IntersectionObserver(([entry]) => {
-    cancelAnimationFrame(tick);
-    if (entry?.isIntersecting) draw();
-  }).observe(codaTime);
-}
-
 // ---------- whiterose : la pièce cachée ----------
 // Chargée à la demande : rien ne pèse sur le site tant qu'on ne l'appelle pas.
 async function whiterose() {

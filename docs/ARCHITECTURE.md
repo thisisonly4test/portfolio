@@ -60,7 +60,7 @@ La commande cachée `whiterose` (effet `{ type: 'whiterose' }`) charge à la dem
 
 Si l'image change, remesurer `SCREEN`, `LAMP` et les villes dans `geometry.ts`.
 
-La citation qui clôt le site (`coda()` dans `page.ts`) signe whiterose et sert d'indice.
+La citation tout en bas du site (`coda()` dans `page.ts`), presque invisible, apparaît au survol et sert d'indice.
 
 ## Le shell
 
