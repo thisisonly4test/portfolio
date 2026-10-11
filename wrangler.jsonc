@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Must match the Worker name in the Cloudflare dashboard.
+  "name": "portfolio",
+  "compatibility_date": "2026-09-01",
+  // Static site: wrangler builds it, then uploads dist/ as assets (no Worker script).
+  "build": {
+    "command": "npm run build"
+  },
+  "assets": {
+    "directory": "./dist"
+  }
+}
