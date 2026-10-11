@@ -152,6 +152,8 @@
 
 .site {
   position: relative;
+  /* Garde la marge basse de la citation dans le site, sur le même fond. */
+  display: flow-root;
 }
 
 /* ---------- sauts ---------- */
@@ -1003,11 +1005,15 @@
   position: relative;
   z-index: 1;
   width: fit-content;
-  margin: 0 auto;
-  padding: 10px 16px 22px;
+  max-width: min(34em, calc(100% - 32px));
+  /* L'espace vide autour est en marge : seul le texte réagit au survol. */
+  margin: 18vh auto 14vh;
+  padding: 8px 16px;
   font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   font-style: italic;
-  font-size: 15px;
+  font-size: clamp(18px, 1.6vw, 21px);
+  line-height: 1.5;
+  text-wrap: balance;
   letter-spacing: 0.02em;
   text-align: center;
   color: var(--text-2);

@@ -127,7 +127,7 @@ export function renderPage(p: Profile, options: RenderOptions = {}): PageHandles
   return { root, nav, canvas, hops, terminalButton };
 }
 
-export const CODA_QUOTE = 'Chaque seconde compte. J’ai compté les tiennes.';
+export const CODA_QUOTE = 'Chaque seconde compte, Elliot. Le temps est une vertu, et je n’ai jamais pardonné à ceux qui gaspillaient la mienne.';
 
 /**
  * Le mot de la fin, tout en bas : presque invisible, il n'apparaît en fondu
